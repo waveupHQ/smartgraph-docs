@@ -19,12 +19,6 @@
     "thumbsRating": true,
     "suggestEdit": true
   },
-  "topbarLinks": [
-    {
-      "name": "Support",
-      "url": "mailto:jeblister@waveup.dev"
-    }
-  ],
   "topbarCtaButton": {
     "type": "github",
     "url": "https://github.com/phidatahq/phidata"
