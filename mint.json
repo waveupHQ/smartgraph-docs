@@ -6,15 +6,17 @@
     "light": "/logo/light.svg"
   },
   "favicon": "/favicon.svg",
+
   "colors": {
-    "primary": "#0D9373",
-    "light": "#07C983",
-    "dark": "#0D9373",
+    "primary": "#B22222",
+    "light": "#FF7F7F",
+    "dark": "#8B0000",
     "anchors": {
-      "from": "#0D9373",
-      "to": "#07C983"
+      "from": "#B22222",
+      "to": "#FF6347"
     }
   },
+
   "feedback": {
     "thumbsRating": true,
     "suggestEdit": true
@@ -31,10 +33,6 @@
     {
       "name": "Reference",
       "url": "api-reference"
-    },
-    {
-      "name": "FAQs",
-      "url": "faq"
     }
   ],
   "navigation": [
