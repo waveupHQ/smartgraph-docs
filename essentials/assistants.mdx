@@ -1,0 +1,123 @@
+---
+title: AI Assistants
+description: >-
+  One of SmartGraph's key strengths is its ability to seamlessly integrate AI assistants and leverage the power of Large Language Models (LLMs). This page guides you through integrating AI capabilities using the `phi` library, enabling intelligent and interactive behavior in your SmartGraph applications.
+icon: "brain"
+---
+
+## Setting Up Your AI Assistant
+
+1. **Install `phi`:** If you haven't already, install the `phi` library using pip:
+
+   ```bash
+   pip install phi
+   ```
+
+2. **Choose Your LLM Provider:** `phi` supports various LLM providers. Select the one that best suits your needs and obtain the necessary API keys or credentials.
+
+3. **Initialize Your Assistant:** Create an instance of `phi.assistant.Assistant`, providing the LLM and any required configuration:
+
+   ```python
+   from phi.assistant import Assistant
+   from phi.llm.openai import GPT4  # Or another LLM class from phi
+
+   assistant = Assistant(llm=GPT4(api_key="YOUR_OPENAI_API_KEY"))
+   ```
+
+## Creating an AIActor
+
+Once you have your AI assistant initialized, you can create an `AIActor` and associate it with the assistant:
+
+```python
+from smartgraph import AIActor
+
+ai_actor = AIActor("AI", assistant=assistant)
+```
+
+Now, the `ai_actor` can perform tasks that involve interacting with the LLM through the `phi` assistant.
+
+## Defining Tasks for Your AIActor
+
+When defining tasks for your `AIActor`, use the `prompt` attribute of the `Task` object to provide instructions or context to the LLM.
+
+**Example:**
+
+```python
+from smartgraph import Task
+
+summarize_text_task = Task(
+    description="Summarize the user's input",
+    prompt="Please provide a concise summary of the following text: {input[user_text]}",
+)
+
+generate_story_task = Task(
+    description="Generate a short story based on a theme",
+    prompt="Write a short story about {input[story_theme]}.",
+)
+```
+
+Notice how the prompts use the `{input[key]}` format to access data from the input data, which can be passed between nodes.
+
+## Passing Data Between Nodes
+
+You can seamlessly pass data between AI actors and other nodes in your SmartGraph. The output of a node's task is available as input to subsequent nodes.
+
+**Example:**
+
+```python
+get_user_text_node = Node(id="get_user_text", actor=human_actor, task=get_text_task)
+summarize_text_node = Node(id="summarize_text", actor=ai_actor, task=summarize_text_task)
+
+graph.add_edge(Edge(source_id="get_user_text", target_id="summarize_text"))
+
+# When 'get_user_text_node' executes, its output (e.g., {'user_text': "Some text"})
+# will be passed as input to 'summarize_text_node'.
+```
+
+## Handling AI-Specific Errors and Limitations
+
+- **API Errors:** LLM providers have usage limits and might experience occasional errors. Implement error handling to gracefully catch API exceptions and provide informative feedback to the user.
+- **LLM Limitations:** LLMs can sometimes generate unexpected or nonsensical output. Consider implementing validation or filtering mechanisms to ensure the quality and relevance of AI-generated responses.
+- **Context Window:** LLMs have a limited context window, meaning they can only process a certain amount of text at a time. If your application requires long conversations or extensive history, you may need to manage context effectively using techniques like summarization or selective memory retrieval.
+
+## Example: Integrating a Chatbot with OpenAI's GPT
+
+```python
+from smartgraph import SmartGraph, Node, Edge, HumanActor, AIActor, Task
+from phi.assistant import Assistant
+from phi.llm.openai import GPT35Turbo
+
+# Initialize OpenAI assistant
+assistant = Assistant(llm=GPT35Turbo(api_key="YOUR_OPENAI_API_KEY"))
+
+# Create actors
+human = HumanActor("User")
+ai = AIActor("AI", assistant=assistant)
+
+# Define tasks
+greet_task = Task(description="Greet the user", prompt="Hello! How can I help you today?")
+respond_task = Task(description="Respond to the user", prompt="{input[user_message]}")
+
+# Create nodes
+greet_node = Node(id="greet", actor=ai, task=greet_task)
+get_user_message_node = Node(id="get_user_message", actor=human, task=Task(description="Get user message"))
+respond_node = Node(id="respond", actor=ai, task=respond_task)
+
+# Construct the graph
+graph = SmartGraph()
+graph.add_node(greet_node)
+graph.add_node(get_user_message_node)
+graph.add_node(respond_node)
+
+# Connect nodes with edges
+graph.add_edge(Edge(source_id="greet", target_id="get_user_message"))
+graph.add_edge(Edge(source_id="get_user_message", target_id="respond"))
+
+# Execute the graph
+final_output, should_exit = graph.execute("greet", {}, "conversation_1")
+print("Final output:", final_output)
+```
+
+This example demonstrates a basic chatbot that uses OpenAI's GPT to greet the user and respond to their messages.
+
+By integrating AI assistants into SmartGraph, you can create more intelligent, dynamic, and interactive applications.

@@ -1,0 +1,107 @@
+---
+title: "Custom Actors and Actions"
+description: >-
+  SmartGraph provides a powerful framework for building applications with LLMs, but its true flexibility comes from its extensibility. You can create custom actors to perform specialized actions that go beyond the capabilities of the built-in `HumanActor` and `AIActor`.
+icon: "gear"
+---
+
+## Why Create Custom Actors?
+
+Custom actors allow you to:
+
+- **Integrate External Systems:** Interact with databases, APIs, and other external services.
+- **Perform Specialized Tasks:** Execute complex logic, calculations, or data manipulations that are not well-suited for AI models.
+- **Encapsulate Reusable Logic:** Create modular components that can be easily reused across different workflows.
+
+## Creating a Custom Actor
+
+To create a custom actor, you need to:
+
+1. **Define a Class:** Create a new Python class that inherits from the `smartgraph.base.BaseActor` abstract class.
+2. **Implement `perform_task()`:** Override the abstract method `perform_task()`, which will be called by SmartGraph when the actor's node is executed.
+
+### Example: Database Actor
+
+Let's create a custom actor that interacts with a database:
+
+```python
+from smartgraph.base import BaseActor, Task
+
+class DatabaseActor(BaseActor):
+    def __init__(self, name: str, database_connection: Any):
+        super().__init__(name)
+        self.database_connection = database_connection
+
+    async def perform_task(self, task: Task, input_data: dict, state: dict) -> dict:
+        if task.description == "Save data to database":
+            # Code to save data to the database using self.database_connection
+            return {"status": "Data saved successfully"}
+        elif task.description == "Retrieve data from database":
+            # Code to retrieve data from the database
+            return {"data": retrieved_data}
+        else:
+            raise ValueError(f"Unsupported task: {task.description}")
+```
+
+In this example:
+
+- We initialize the `DatabaseActor` with a database connection object.
+- The `perform_task()` method handles different database operations based on the `task.description`.
+
+## Using Custom Actions within Actors
+
+You can further customize your actors by defining custom actions using Python functions. These functions can encapsulate complex logic and be called within the `perform_task()` method.
+
+### Example: API Call Action
+
+```python
+import requests
+
+def make_api_call(url: str, params: dict) -> dict:
+    response = requests.get(url, params=params)
+    response.raise_for_status() # Raise an exception if there's an HTTP error
+    return response.json()
+
+class APIActor(BaseActor):
+    def __init__(self, name: str):
+        super().__init__(name)
+
+    async def perform_task(self, task: Task, input_data: dict, state: dict) -> dict:
+        if task.description == "Fetch data from API":
+            url = task.prompt.format(**input_data) # Assuming prompt contains API URL template
+            api_data = make_api_call(url, input_data.get("api_params", {}))
+            return {"api_data": api_data}
+        else:
+            raise ValueError(f"Unsupported task: {task.description}")
+```
+
+Here, we define a `make_api_call` function that handles making API requests. The `APIActor` uses this function to fetch data from an API based on the provided URL and parameters.
+
+## Integrating Custom Actors in a SmartGraph
+
+To use your custom actor in a SmartGraph:
+
+1. **Instantiate the Actor:** Create an instance of your custom actor, providing any necessary parameters.
+2. **Create a Node:** Create a `Node` instance, associating it with your custom actor and a `Task`.
+3. **Add to the Graph:** Add the node to your SmartGraph instance.
+
+**Example:**
+
+```python
+database_actor = DatabaseActor("Database", database_connection)
+save_data_node = Node(
+    id="save_data",
+    actor=database_actor,
+    task=Task(description="Save data to database"),
+)
+graph.add_node(save_data_node)
+```
+
+## Common Use Cases
+
+- **Database Interactions:** Create actors to perform CRUD operations on a database.
+- **API Calls:** Build actors that fetch or send data to external APIs.
+- **File Operations:** Define actors for reading, writing, or processing files.
+- **Data Transformations:** Create actors to clean, transform, or analyze data.
+
+By defining custom actors, you can extend SmartGraph's capabilities to suit your specific application requirements and build a wide range of powerful and intelligent applications.

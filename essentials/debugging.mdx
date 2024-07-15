@@ -1,0 +1,91 @@
+---
+title: "Debugging"
+description: >-
+  Building robust and reliable applications requires a solid understanding of error handling and debugging techniques. This page outlines how SmartGraph helps you manage errors effectively and provides guidance on debugging your SmartGraph applications.
+icon: "bug"
+---
+
+# Error Handling and Debugging in SmartGraph
+
+## SmartGraph's Exception Hierarchy
+
+SmartGraph utilizes a custom exception hierarchy rooted in the base exception class `SmartGraphException`. This hierarchy categorizes errors into specific types, making it easier to identify and handle them appropriately.
+
+Some common exception types include:
+
+- `ExecutionError`: Raised when an error occurs during the execution of a node's task.
+- `ConfigurationError`: Indicates an issue with the configuration of SmartGraph components, such as incorrect parameters or missing dependencies.
+- `ValidationError`: Signifies invalid input data or state values.
+- `MemoryError`: Occurs when there are problems with memory management, such as accessing non-existent keys or exceeding memory limits.
+- `GraphStructureError`: Raised when there are inconsistencies or errors in the graph structure, like duplicate node IDs or invalid edge connections.
+
+## Handling Errors Effectively
+
+1. **Use Try-Except Blocks:** Enclose code that might raise exceptions within `try-except` blocks.
+
+   ```python
+   try:
+       # Code that might raise an exception
+   except ExecutionError as e:
+       print(f"An execution error occurred: {e}")
+   except ConfigurationError as e:
+       print(f"A configuration error occurred: {e}")
+   ```
+
+2. **Catch Specific Exceptions:** Catch specific exception types to handle different error scenarios with tailored responses.
+
+3. **Provide Informative Error Messages:** When catching exceptions, provide clear and informative error messages to help users understand the issue.
+
+4. **Implement Graceful Degradation:** For non-critical errors, consider implementing fallback mechanisms or graceful degradation to prevent the entire application from failing.
+
+## Debugging SmartGraph Applications
+
+1. **Use the `SmartGraphLogger`:** SmartGraph provides a built-in logger (`SmartGraphLogger`) to record events, warnings, and errors during execution. Configure the logging level to control the verbosity of the output.
+
+   ```python
+   from smartgraph.logging import SmartGraphLogger
+
+   logger = SmartGraphLogger.get_logger()
+   logger.info("This is an informational message.")
+   logger.warning("This is a warning.")
+   logger.error("This is an error message.")
+   ```
+
+2. **Examine the Logs:** Review the log output to identify the source of errors and understand the flow of execution.
+
+3. **Set Breakpoints:** If you're using an IDE that supports debugging, set breakpoints in your code to pause execution and inspect variables and the call stack.
+
+4. **Print Statements:** For simple debugging, use `print` statements to output values and track the progress of your code.
+
+5. **Visualize the Graph:** Use the `draw_graph()` method of the `SmartGraph` class to visualize the graph structure. This can help you identify potential issues with node connections or edge conditions.
+
+## The Role of Logging
+
+Logging plays a vital role in debugging and monitoring SmartGraph applications. The `SmartGraphLogger` allows you to:
+
+- **Track Execution Flow:** Log messages at various points in your code to understand the sequence of events.
+- **Record Important Data:** Log input data, state values, and output results to help diagnose problems.
+- **Identify Errors:** Log exceptions and error messages to pinpoint the source of issues.
+- **Monitor Performance:** Log timestamps and execution times to analyze performance bottlenecks.
+
+## Example: Handling an API Error
+
+```python
+from smartgraph.exceptions import ExecutionError
+
+try:
+    # Code to make an API call
+except requests.exceptions.RequestException as e:
+    logger.error(f"API request failed: {e}")
+    raise ExecutionError("Failed to fetch data from the API") from e
+```
+
+In this example:
+
+- We catch the `RequestException` raised by the `requests` library, indicating an API error.
+- We log the error using the `SmartGraphLogger`.
+- We re-raise an `ExecutionError` with a more informative message, providing context to the user.
+
+## Conclusion
+
+By understanding SmartGraph's exception hierarchy, utilizing effective error handling techniques, and leveraging the power of logging, you can create robust, reliable, and easily debuggable applications. Remember to provide clear error messages and consider graceful degradation strategies to enhance the user experience.

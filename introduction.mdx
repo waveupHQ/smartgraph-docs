@@ -1,73 +1,68 @@
 ---
-title: Introduction
-description: "Welcome to the home of your new documentation"
+title: Introduction to SmartGraph
+description: "SmartGraph is a Python library designed for building stateful, multi-actor applications powered by Large Language Models (LLMs). It provides a structured and flexible framework to represent complex workflows and interactions between different actors, including human users, AI assistants, and Python functions.
+"
 ---
 
-<img
-  className="block dark:hidden"
-  src="/images/hero-light.svg"
-  alt="Hero Light"
-/>
-<img
-  className="hidden dark:block"
-  src="/images/hero-dark.svg"
-  alt="Hero Dark"
-/>
+## Why SmartGraph?
 
-# Smart Graph ?
+Building applications with LLMs often involves managing conversation history, user preferences, and dynamic decision-making. SmartGraph simplifies this process by:
 
-## Setting up
+- **Representing your application logic visually and intuitively using a directed graph:** This makes it easier to understand and modify the flow of your application.
+- **Handling state management seamlessly:** You can focus on defining the interactions between actors without worrying about the underlying complexities of state persistence.
+- **Enabling dynamic branching and conditional logic:** This allows you to create more engaging and responsive applications that adapt to user input and application state.
 
-The first step to world-class documentation is setting up your editing environments.
+## Key Features
 
-<CardGroup cols={2}>
-  <Card
-    title="Edit Your Docs"
-    icon="pen-to-square"
-    href="https://mintlify.com/docs/quickstart"
-  >
-    Get your docs set up locally for easy development
-  </Card>
-  <Card
-    title="Preview Changes"
-    icon="image"
-    href="https://mintlify.com/docs/development"
-  >
-    Preview your changes before you push to make sure they're perfect
-  </Card>
-</CardGroup>
+- **Stateful Interactions:** Maintain and manage state throughout the application lifecycle, enabling persistent conversations and complex workflows.
+- **Multi-Actor Architecture:** Define interactions between multiple actors, including human users, AI assistants powered by libraries like `phi`, and custom Python functions.
+- **Graph-Based Workflow:** Represent your application logic visually and intuitively using a directed graph, where nodes represent tasks and edges define transitions between them.
+- **Conditional Logic and Branching:** Define conditions on edges to control the flow of execution based on data and state, enabling dynamic and responsive applications.
+- **Built-in Memory Management:** Leverage short-term and long-term memory components to store and retrieve information, enabling context-aware AI interactions.
+- **Error Handling and Logging:** Utilize SmartGraph's robust error handling system and comprehensive logging capabilities to debug and monitor your applications effectively.
 
-## Make it yours
+## Getting Started
 
-Update your docs to your brand and add valuable content for the best user conversion.
+### Installation
 
-<CardGroup cols={2}>
-  <Card
-    title="Customize Style"
-    icon="palette"
-    href="https://mintlify.com/docs/settings/global"
-  >
-    Customize your docs to your company's colors and brands
-  </Card>
-  <Card
-    title="Reference APIs"
-    icon="code"
-    href="https://mintlify.com/docs/api-playground/openapi"
-  >
-    Automatically generate endpoints from an OpenAPI spec
-  </Card>
-  <Card
-    title="Add Components"
-    icon="screwdriver-wrench"
-    href="https://mintlify.com/docs/components/accordion"
-  >
-    Build interactive features and designs to guide your users
-  </Card>
-  <Card
-    title="Get Inspiration"
-    icon="stars"
-    href="https://mintlify.com/customers"
-  >
-    Check out our showcase of our favorite documentation
-  </Card>
-</CardGroup>
+Install SmartGraph using pip:
+
+```bash
+pip install smartgraph
+```
+
+### Basic Setup
+
+Here's a minimal example to illustrate SmartGraph's core concepts:
+
+```python
+from smartgraph import SmartGraph, Node, Edge, HumanActor, AIActor, Task
+
+# Create actors
+human = HumanActor("User")
+ai = AIActor("AI")
+
+# Define tasks
+start_task = Task(description="Start the conversation")
+ai_response_task = Task(description="AI provides a response")
+human_feedback_task = Task(description="Human provides feedback")
+
+# Create nodes
+start_node = Node(id="start", actor=human, task=start_task)
+ai_response_node = Node(id="ai_response", actor=ai, task=ai_response_task)
+human_feedback_node = Node(id="human_feedback", actor=human, task=human_feedback_task)
+
+# Construct the graph
+graph = SmartGraph()
+graph.add_node(start_node)
+graph.add_node(ai_response_node)
+graph.add_node(human_feedback_node)
+
+# Connect nodes with edges
+graph.add_edge(Edge(source_id="start", target_id="ai_response"))
+graph.add_edge(Edge(source_id="ai_response", target_id="human_feedback"))
+
+# Execute the graph
+final_output, should_exit = graph.execute("start", {"user_input": "Hello!"}, "conversation_1")
+print("Final output:", final_output)
+```

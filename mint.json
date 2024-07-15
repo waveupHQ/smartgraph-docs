@@ -23,7 +23,7 @@
   },
   "topbarCtaButton": {
     "type": "github",
-    "url": "https://github.com/phidatahq/phidata"
+    "url": "https://github.com/waveuphq/smartgraph"
   },
   "tabs": [
     {
@@ -43,12 +43,14 @@
     {
       "group": "Essentials",
       "pages": [
-        "essentials/markdown",
-        "essentials/code",
-        "essentials/images",
-        "essentials/settings",
-        "essentials/navigation",
-        "essentials/reusable-snippets"
+        "essentials/concepts",
+        "essentials/state",
+        "essentials/flow",
+        "essentials/persistence",
+        "essentials/assistants",
+        "essentials/custom-actors",
+        "essentials/debugging",
+        "essentials/testing"
       ]
     },
     {

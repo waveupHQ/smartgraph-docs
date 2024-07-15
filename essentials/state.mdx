@@ -1,0 +1,96 @@
+---
+title: "State Management"
+description: >-
+  Building stateful applications with LLMs requires careful management of information. SmartGraph provides a built-in memory management system and the concept of "context" to help you maintain and access relevant data throughout your application's workflow.
+icon: "recycle"
+---
+
+## Memory Management with `MemoryManager`
+
+SmartGraph's `MemoryManager` handles the storage and retrieval of data, providing two distinct memory components:
+
+### 1. Short-Term Memory
+
+Short-term memory is designed to hold transient information that is relevant to the current stage of the workflow. It acts as a temporary scratchpad for storing data that might be needed by subsequent nodes.
+
+- **Scope:** Node-level or global. You can choose to store data specific to a node or make it accessible across the entire graph.
+- **Persistence:** Data in short-term memory is typically not persisted between executions of the graph.
+
+**Common Use Cases:**
+
+- Storing user input received during the current interaction.
+- Holding intermediate results from calculations or AI processing.
+- Tracking temporary flags or variables that influence workflow logic.
+
+### 2. Long-Term Memory
+
+Long-term memory is intended for storing persistent data that needs to be retained across multiple interactions or executions of the graph.
+
+- **Scope:** Global. Long-term memory is accessible to all nodes in the graph.
+- **Persistence:** Data in long-term memory is designed to be saved and loaded, allowing your application to remember information between sessions.
+
+**Common Use Cases:**
+
+- Maintaining conversation history.
+- Storing user preferences or profile information.
+- Keeping track of accumulated data or knowledge gained over time.
+
+## Using `MemoryManager`
+
+You can access the `MemoryManager` through the `memory_manager` attribute of your `SmartGraph` instance.
+
+**Storing Data:**
+
+```python
+graph = SmartGraph()
+
+# Update short-term memory (global scope)
+await graph.memory_manager.update_short_term("user_input", "Hello")
+
+# Update long-term memory
+await graph.memory_manager.update_long_term("conversation_history", ["Hi there!", "How can I help you?"])
+```
+
+**Retrieving Data:**
+
+```python
+# Retrieve from short-term memory
+user_input = await graph.memory_manager.get_short_term("user_input")
+
+# Retrieve from long-term memory
+conversation_history = await graph.memory_manager.get_long_term("conversation_history")
+```
+
+## The Concept of Context
+
+In SmartGraph, "context" refers to the combined set of information available to a node during execution. This includes:
+
+- **Input Data:** Data passed to the `execute()` method or received from the output of previous nodes.
+- **Node State:** Data stored in the node's local state manager.
+- **Short-Term Memory:** Data accessible in the global short-term memory.
+- **Long-Term Memory:** Data retrieved from the persistent long-term memory.
+
+The context provides a comprehensive view of the current state of the application, allowing nodes to make informed decisions and generate relevant responses.
+
+**Accessing Context within a Task:**
+
+You can access the context within a task's `prompt` using the following format:
+
+```python
+respond_task = Task(
+    description="Respond to the user",
+    prompt="You said: {input[user_input]}. How can I assist you further?",
+)
+```
+
+In this example, `{input[user_input]}` will be replaced with the value stored in the `user_input` key of the input data.
+
+## Importance of State Management
+
+Effective state management is crucial for building sophisticated LLM applications. SmartGraph's `MemoryManager` and the concept of context provide the tools you need to:
+
+- **Maintain Conversational Flow:** Remember previous interactions to create natural and engaging conversations.
+- **Personalize Experiences:** Store user preferences and tailor responses accordingly.
+- **Accumulate Knowledge:** Build up a knowledge base over time to provide more informed and helpful assistance.
+
+By mastering state management in SmartGraph, you can unlock the full potential of LLMs and create truly intelligent and interactive applications.

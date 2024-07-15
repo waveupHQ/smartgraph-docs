@@ -1,0 +1,91 @@
+---
+title: "Controlling Flow"
+description: >-
+  SmartGraph's power lies in its ability to create dynamic and responsive workflows. Edges, combined with conditional logic, are the key to defining how your application progresses from one step to the next.
+icon: "option"
+---
+
+# Controlling Flow: Edges and Conditional Logic
+
+SmartGraph's power lies in its ability to create dynamic and responsive workflows. Edges, combined with conditional logic, are the key to defining how your application progresses from one step to the next.
+
+## Edges: The Pathways of Your Workflow
+
+Edges define the transitions between nodes in your SmartGraph. They determine the direction of flow and create the pathways for your application logic. Each edge connects a source node to a target node, indicating that after the source node's task is executed, the workflow should proceed to the target node.
+
+**Creating a Simple Edge:**
+
+```python
+from smartgraph import Edge
+
+edge = Edge(source_id="node_A", target_id="node_B")
+```
+
+This edge establishes a direct transition from `node_A` to `node_B`. When `node_A` completes, the workflow will automatically move to `node_B`.
+
+## Conditional Logic: Making Dynamic Decisions
+
+Simple edges create linear workflows, but SmartGraph allows you to introduce branching and decision-making using conditions. Conditions are boolean expressions (returning `True` or `False`) that determine whether an edge is valid. Only valid edges are followed during execution.
+
+**Adding a Condition to an Edge:**
+
+```python
+edge = Edge(
+    source_id="ask_question",
+    target_id="provide_answer",
+    condition=lambda data: data['user_response'] == 'yes'
+)
+```
+
+In this example, the edge from `ask_question` to `provide_answer` will only be followed if the value associated with the key `'user_response'` in the current data is equal to `'yes'`.
+
+## Types of Conditions
+
+You can use various types of conditions to create flexible workflow logic:
+
+### 1. Data-Based Conditions
+
+These conditions evaluate data that is passed between nodes or stored in the short-term memory.
+
+**Example:**
+
+```python
+# Check if the user's age is greater than 18
+condition = lambda data: data['user_age'] > 18
+
+# Check if the user selected a specific option
+condition = lambda data: data['user_choice'] == 'option_A'
+```
+
+### 2. State-Based Conditions
+
+These conditions examine the state of the application, including data stored in the long-term memory or the state of individual nodes.
+
+**Example:**
+
+```python
+# Check if a user is logged in (assuming 'is_logged_in' is stored in long-term memory)
+condition = lambda data: graph.memory_manager.get_long_term('is_logged_in')
+
+# Check if a node has been executed before (using node's internal state)
+condition = lambda data: node.state.get('has_been_executed', False)
+```
+
+### 3. Complex Conditions
+
+You can combine multiple conditions using logical operators (`and`, `or`, `not`) to create more complex decision-making logic.
+
+**Example:**
+
+```python
+# Check if the user is logged in AND their age is over 21
+condition = lambda data: graph.memory_manager.get_long_term('is_logged_in') and data['user_age'] > 21
+```
+
+## Benefits of Conditional Logic
+
+- **Dynamic Workflows:** Create workflows that adapt to user input, preferences, and changing application state.
+- **Personalized Experiences:** Tailor the flow of execution to provide customized experiences for individual users.
+- **Complex Decision-Making:** Implement sophisticated logic to handle various scenarios and edge cases.
+
+By mastering edges and conditional logic in SmartGraph, you can build truly intelligent and interactive applications that respond dynamically to the needs of your users.
