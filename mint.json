@@ -68,21 +68,7 @@
     },
     {
       "group": "Examples",
-      "pages": [
-        "examples/cookbook",
-        "examples/simple-chat",
-        "examples/customer-support",
-        "examples/personal-assistant",
-        "examples/data-analysis",
-        "examples/document-summarization",
-        "examples/content-creation",
-        "examples/code-review",
-        "examples/investment-advisor",
-        "examples/api-integration",
-        "examples/database-operations",
-        "examples/multi-agent",
-        "examples/adaptive-learning"
-      ]
+      "pages": ["examples/simple-chat"]
     }
   ],
   "footerSocials": {
