@@ -1,123 +1,147 @@
 ---
 title: AI Assistants
-description: >-
-  One of SmartGraph's key strengths is its ability to seamlessly integrate AI assistants and leverage the power of Large Language Models (LLMs). This page guides you through integrating AI capabilities using the `phi` library, enabling intelligent and interactive behavior in your SmartGraph applications.
+description: "Learn how to integrate AI assistants into your SmartGraph applications using phidata"
 icon: "brain"
 ---
 
-## Setting Up Your AI Assistant
+SmartGraph's power is amplified when combined with AI assistants. By leveraging the phidata (phi) library, you can create sophisticated AI-driven applications that can perform a wide range of tasks.
 
-1. **Install `phi`:** If you haven't already, install the `phi` library using pip:
+## What is phidata?
 
-   ```bash
-   pip install phi
-   ```
+Phidata is a framework for building **AI Assistants** with memory, knowledge, and tools. It allows you to turn any Large Language Model (LLM) into an AI Assistant that can:
 
-2. **Choose Your LLM Provider:** `phi` supports various LLM providers. Select the one that best suits your needs and obtain the necessary API keys or credentials.
+- Search the web
+- Pull data from APIs
+- Analyze data using SQL, DuckDb, etc.
+- Conduct research and generate reports
+- Answer questions from PDFs, APIs, etc.
+- Summarize articles, videos, etc.
+- Perform tasks like sending emails, querying databases, etc.
 
-3. **Initialize Your Assistant:** Create an instance of `phi.assistant.Assistant`, providing the LLM and any required configuration:
+## Integrating phidata with SmartGraph
 
-   ```python
-   from phi.assistant import Assistant
-   from phi.llm.openai import GPT4  # Or another LLM class from phi
+SmartGraph's `AIActor` class is designed to work seamlessly with phidata's `Assistant` class. Here's how you can integrate them:
 
-   assistant = Assistant(llm=GPT4(api_key="YOUR_OPENAI_API_KEY"))
-   ```
+<Steps>
+  <Step title="Install phidata">
+    First, install phidata in your project environment:
 
-## Creating an AIActor
+    ```bash
+    pip install -U phidata
+    ```
 
-Once you have your AI assistant initialized, you can create an `AIActor` and associate it with the assistant:
+  </Step>
+  <Step title="Create a phidata Assistant">
+    Create a phidata Assistant with the desired capabilities:
 
-```python
-from smartgraph import AIActor
+    ```python
+    from phi.assistant import Assistant
+    from phi.tools.duckduckgo import DuckDuckGo
 
-ai_actor = AIActor("AI", assistant=assistant)
-```
+    phi_assistant = Assistant(tools=[DuckDuckGo()], show_tool_calls=True)
+    ```
 
-Now, the `ai_actor` can perform tasks that involve interacting with the LLM through the `phi` assistant.
+  </Step>
+  <Step title="Create an AIActor with the phidata Assistant">
+    Use the phidata Assistant to create a SmartGraph AIActor:
 
-## Defining Tasks for Your AIActor
+    ```python
+    from smartgraph import AIActor
 
-When defining tasks for your `AIActor`, use the `prompt` attribute of the `Task` object to provide instructions or context to the LLM.
+    ai_actor = AIActor("AI Research Assistant", assistant=phi_assistant)
+    ```
 
-**Example:**
+  </Step>
+  <Step title="Use the AIActor in your SmartGraph">
+    Now you can use this AIActor in your SmartGraph nodes:
 
-```python
-from smartgraph import Task
+    ```python
+    from smartgraph import Node, Task
 
-summarize_text_task = Task(
-    description="Summarize the user's input",
-    prompt="Please provide a concise summary of the following text: {input[user_text]}",
-)
+    research_node = Node(
+        id="research",
+        actor=ai_actor,
+        task=Task(description="Conduct web research", prompt="Research the latest developments in AI")
+    )
+    ```
 
-generate_story_task = Task(
-    description="Generate a short story based on a theme",
-    prompt="Write a short story about {input[story_theme]}.",
-)
-```
+  </Step>
+</Steps>
 
-Notice how the prompts use the `{input[key]}` format to access data from the input data, which can be passed between nodes.
+## Example: Web Research Assistant
 
-## Passing Data Between Nodes
-
-You can seamlessly pass data between AI actors and other nodes in your SmartGraph. The output of a node's task is available as input to subsequent nodes.
-
-**Example:**
-
-```python
-get_user_text_node = Node(id="get_user_text", actor=human_actor, task=get_text_task)
-summarize_text_node = Node(id="summarize_text", actor=ai_actor, task=summarize_text_task)
-
-graph.add_edge(Edge(source_id="get_user_text", target_id="summarize_text"))
-
-# When 'get_user_text_node' executes, its output (e.g., {'user_text': "Some text"})
-# will be passed as input to 'summarize_text_node'.
-```
-
-## Handling AI-Specific Errors and Limitations
-
-- **API Errors:** LLM providers have usage limits and might experience occasional errors. Implement error handling to gracefully catch API exceptions and provide informative feedback to the user.
-- **LLM Limitations:** LLMs can sometimes generate unexpected or nonsensical output. Consider implementing validation or filtering mechanisms to ensure the quality and relevance of AI-generated responses.
-- **Context Window:** LLMs have a limited context window, meaning they can only process a certain amount of text at a time. If your application requires long conversations or extensive history, you may need to manage context effectively using techniques like summarization or selective memory retrieval.
-
-## Example: Integrating a Chatbot with OpenAI's GPT
+Let's create a simple SmartGraph application that uses a phidata-powered AI assistant to conduct web research:
 
 ```python
 from smartgraph import SmartGraph, Node, Edge, HumanActor, AIActor, Task
 from phi.assistant import Assistant
-from phi.llm.openai import GPT35Turbo
+from phi.tools.duckduckgo import DuckDuckGo
 
-# Initialize OpenAI assistant
-assistant = Assistant(llm=GPT35Turbo(api_key="YOUR_OPENAI_API_KEY"))
+# Create phidata Assistant
+phi_assistant = Assistant(tools=[DuckDuckGo()], show_tool_calls=True)
 
-# Create actors
+# Create SmartGraph actors
 human = HumanActor("User")
-ai = AIActor("AI", assistant=assistant)
-
-# Define tasks
-greet_task = Task(description="Greet the user", prompt="Hello! How can I help you today?")
-respond_task = Task(description="Respond to the user", prompt="{input[user_message]}")
+ai = AIActor("AI Researcher", assistant=phi_assistant)
 
 # Create nodes
-greet_node = Node(id="greet", actor=ai, task=greet_task)
-get_user_message_node = Node(id="get_user_message", actor=human, task=Task(description="Get user message"))
-respond_node = Node(id="respond", actor=ai, task=respond_task)
+start_node = Node(id="start", actor=human, task=Task(description="Get research topic"))
+research_node = Node(id="research", actor=ai, task=Task(description="Conduct web research"))
+present_node = Node(id="present", actor=ai, task=Task(description="Present research findings"))
 
-# Construct the graph
+# Create graph
 graph = SmartGraph()
-graph.add_node(greet_node)
-graph.add_node(get_user_message_node)
-graph.add_node(respond_node)
+graph.add_node(start_node)
+graph.add_node(research_node)
+graph.add_node(present_node)
 
-# Connect nodes with edges
-graph.add_edge(Edge(source_id="greet", target_id="get_user_message"))
-graph.add_edge(Edge(source_id="get_user_message", target_id="respond"))
+# Add edges
+graph.add_edge(Edge(source_id="start", target_id="research"))
+graph.add_edge(Edge(source_id="research", target_id="present"))
 
 # Execute the graph
-final_output, should_exit = graph.execute("greet", {}, "conversation_1")
-print("Final output:", final_output)
+final_output, should_exit = graph.execute("start", {}, "research_session")
+print("Research findings:", final_output)
 ```
 
-This example demonstrates a basic chatbot that uses OpenAI's GPT to greet the user and respond to their messages.
+This example creates a simple research workflow where:
 
-By integrating AI assistants into SmartGraph, you can create more intelligent, dynamic, and interactive applications.
+1. The user provides a research topic
+2. The AI assistant conducts web research using DuckDuckGo
+3. The AI assistant presents the research findings
+
+## Visualizing the AI-Enhanced Workflow
+
+Here's a diagram illustrating how phidata integrates with SmartGraph:
+
+```mermaid
+graph TD
+    A[User Input] --> B[SmartGraph HumanActor]
+    B --> C[SmartGraph AIActor]
+    C --> D[phidata Assistant]
+    D --> E[DuckDuckGo Tool]
+    E --> D
+    D --> C
+    C --> F[Present Results]
+
+    style A fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style B fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style C fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style D fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style E fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style F fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+
+    linkStyle default stroke:#ff0000,stroke-width:2px,stroke-dasharray: 5 5
+```
+
+This diagram shows how user input flows through SmartGraph actors, into the phidata Assistant, which then uses tools like DuckDuckGo to perform tasks before returning results back through the SmartGraph workflow.
+
+## Conclusion
+
+By integrating phidata with SmartGraph, you can create powerful, AI-driven applications that combine the structured workflow management of SmartGraph with the advanced capabilities of AI assistants. This combination allows for the creation of complex, intelligent systems capable of performing a wide range of tasks autonomously.
+
+<Card title="Next Steps" icon="arrow-right" href="/essentials/custom-actors">
+  Learn how to create custom actors and actions to further extend your
+  SmartGraph applications in the [Custom Actors and
+  Actions](/essentials/custom-actors) guide.
+</Card>

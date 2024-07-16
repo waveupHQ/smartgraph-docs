@@ -1,91 +1,196 @@
 ---
-title: "Testing"
-description: >-
-  Thorough testing is crucial for building reliable and maintainable SmartGraph applications. This page provides guidance on writing effective unit tests, mocking external dependencies, and using `pytest` to ensure the quality of your code.
-icon: "vials"
+title: "Testing SmartGraph Applications"
+sidebarTitle: "Testing"
+description: "Learn best practices for testing your SmartGraph workflows and components"
+icon: "vial"
 ---
 
-# Testing SmartGraph Applications
+Effective testing is crucial for building reliable and maintainable SmartGraph applications. This guide covers best practices for writing unit tests, techniques for mocking SmartGraph components, and practical examples using pytest.
 
-## Best Practices for Unit Testing
+## Best Practices for Testing SmartGraph Applications
 
-- **Focus on Individual Nodes:** Test each node in isolation to verify its behavior independently of other nodes in the graph.
-- **Test Edge Conditions:** Write tests to ensure that edge conditions correctly control the flow of execution.
-- **Cover Different Scenarios:** Test various input data and state values to ensure that your nodes handle different scenarios correctly.
-- **Mock External Dependencies:** Isolate your SmartGraph logic from external systems (databases, APIs) by mocking their behavior.
-- **Use Descriptive Test Names:** Write clear and descriptive test names that convey the purpose and expected outcome of each test.
+1. **Test Individual Components**: Write unit tests for actors, nodes, and tasks in isolation.
+2. **Test Graph Structures**: Verify that your graph is constructed correctly.
+3. **Test Execution Flows**: Ensure that your graph executes as expected under various conditions.
+4. **Mock External Dependencies**: Use mocking to isolate your tests from external services or APIs.
+5. **Use Fixtures**: Leverage pytest fixtures for setting up common test scenarios.
+6. **Test Error Handling**: Verify that your application handles errors and edge cases gracefully.
 
-## Mocking Actors and Dependencies
+## Setting Up Your Testing Environment
 
-Mocking allows you to replace real actors and external dependencies with controlled substitutes during testing. This helps you:
+First, ensure you have pytest installed:
 
-- **Isolate Your Code:** Test your SmartGraph logic without relying on external systems that might be unavailable or unpredictable.
-- **Control Behavior:** Define specific responses and behaviors for mocked components to simulate different scenarios.
-- **Improve Test Speed:** Mocked components often execute faster than real systems, leading to quicker test runs.
-
-### Example: Mocking an AIActor
-
-```python
-from unittest.mock import AsyncMock
-
-# Create a mock AI actor
-mock_ai_actor = AsyncMock(spec=AIActor)
-mock_ai_actor.perform_task.return_value = {"response": "This is a mocked AI response."}
-
-# Create a node using the mock actor
-node = Node(id="ai_node", actor=mock_ai_actor, task=your_ai_task)
+```bash
+pip install pytest pytest-asyncio
 ```
 
-In this example, we use `AsyncMock` from the `unittest.mock` library to create a mock `AIActor`. We define the return value of its `perform_task` method to simulate an AI response.
+Create a `tests` directory in your project root and add an empty `__init__.py` file to make it a package.
 
-## Using `pytest` for Testing
+## Testing Individual Components
 
-`pytest` is a popular testing framework for Python. SmartGraph integrates well with `pytest`, providing a convenient way to write and run tests.
+### Testing Actors
 
-### Example: Testing a Node's Execution
+Create a file `tests/test_actors.py`:
 
 ```python
 import pytest
+from smartgraph import BaseActor, Task
+from smartgraph.memory import MemoryManager
 
-from smartgraph import Node, HumanActor, Task
+class TestActor(BaseActor):
+    async def perform_task(self, task, input_data, state):
+        return {"result": f"Performed {task.description}"}
 
 @pytest.mark.asyncio
-async def test_human_node_execution():
-    human_actor = HumanActor("User")
-    get_name_task = Task(description="Get user's name", prompt="What's your name?")
-    node = Node(id="get_name", actor=human_actor, task=get_name_task)
-
-    # Mock user input
-    with mock.patch('builtins.input', return_value="Alice"):
-        output = await node.execute({})
-
-    assert output == {"response": "Alice"}
+async def test_actor_perform_task():
+    memory_manager = MemoryManager()
+    actor = TestActor("TestActor", memory_manager)
+    task = Task(description="test task")
+    result = await actor.perform_task(task, {}, {})
+    assert result == {"result": "Performed test task"}
 ```
 
-In this test:
+### Testing Nodes
 
-- We use `@pytest.mark.asyncio` to indicate an asynchronous test function.
-- We create a `HumanActor` and a node that asks for the user's name.
-- We use `mock.patch` to simulate user input and provide the name "Alice".
-- We assert that the node's output contains the expected response.
+Create a file `tests/test_nodes.py`:
 
-### Example: Testing Edge Conditions
+```python
+import pytest
+from smartgraph import Node, Task
+from smartgraph.memory import MemoryManager
+
+class MockActor:
+    async def perform_task(self, task, input_data, state):
+        return {"mock_result": "Success"}
+
+@pytest.mark.asyncio
+async def test_node_execution():
+    memory_manager = MemoryManager()
+    mock_actor = MockActor()
+    node = Node(id="test_node", actor=mock_actor, task=Task(description="Test task"))
+    result = await node.execute({})
+    assert result == {"mock_result": "Success"}
+```
+
+## Mocking Techniques
+
+Mocking is essential for isolating your tests and simulating various scenarios. Here are some techniques for mocking SmartGraph components:
+
+### Mocking Actors
+
+```python
+from unittest.mock import AsyncMock, MagicMock
+
+def test_graph_with_mock_actor():
+    mock_actor = AsyncMock()
+    mock_actor.perform_task.return_value = {"result": "Mocked result"}
+
+    node = Node(id="mock_node", actor=mock_actor, task=Task(description="Mocked task"))
+    graph = SmartGraph()
+    graph.add_node(node)
+
+    # Test graph execution with mock actor
+    result = await graph.execute("mock_node", {}, "test_session")
+    assert result == {"result": "Mocked result"}
+    mock_actor.perform_task.assert_called_once()
+```
+
+### Mocking External Dependencies
+
+If your actors interact with external services, mock these interactions:
+
+```python
+import aiohttp
+from unittest.mock import patch
+
+class APIActor(BaseActor):
+    async def perform_task(self, task, input_data, state):
+        async with aiohttp.ClientSession() as session:
+            async with session.get('https://api.example.com/data') as response:
+                data = await response.json()
+                return {"api_data": data}
+
+@pytest.mark.asyncio
+async def test_api_actor():
+    mock_response = AsyncMock()
+    mock_response.json.return_value = {"mock_data": "test"}
+
+    mock_session = AsyncMock()
+    mock_session.get.return_value.__aenter__.return_value = mock_response
+
+    with patch('aiohttp.ClientSession', return_value=mock_session):
+        actor = APIActor("APIActor", MemoryManager())
+        result = await actor.perform_task(Task(description="API call"), {}, {})
+
+    assert result == {"api_data": {"mock_data": "test"}}
+```
+
+## Testing Graph Execution
+
+Test the execution of your entire graph to ensure it behaves correctly:
 
 ```python
 @pytest.mark.asyncio
-async def test_edge_condition():
-    edge = Edge(
-        source_id="node_A",
-        target_id="node_B",
-        condition=lambda data: data['value'] > 10
-    )
+async def test_graph_execution():
+    graph = SmartGraph()
 
-    assert edge.is_valid({"value": 15}) == True
-    assert edge.is_valid({"value": 5}) == False
+    # Add nodes and edges to your graph
+    start_node = Node(id="start", actor=MockActor(), task=Task(description="Start"))
+    process_node = Node(id="process", actor=MockActor(), task=Task(description="Process"))
+    end_node = Node(id="end", actor=MockActor(), task=Task(description="End"))
+
+    graph.add_node(start_node)
+    graph.add_node(process_node)
+    graph.add_node(end_node)
+
+    graph.add_edge(Edge(source_id="start", target_id="process"))
+    graph.add_edge(Edge(source_id="process", target_id="end"))
+
+    result, should_exit = await graph.execute("start", {"input": "test"}, "test_session")
+
+    assert not should_exit
+    assert "result" in result
+    # Add more assertions based on your expected output
 ```
 
-Here, we test the `is_valid` method of an edge with a condition that checks if a value is greater than 10.
+## Testing Error Handling
+
+Ensure your graph handles errors gracefully:
+
+```python
+class ErrorActor(BaseActor):
+    async def perform_task(self, task, input_data, state):
+        raise ValueError("Simulated error")
+
+@pytest.mark.asyncio
+async def test_error_handling():
+    graph = SmartGraph()
+    error_node = Node(id="error", actor=ErrorActor("ErrorActor", MemoryManager()), task=Task(description="Error"))
+    graph.add_node(error_node)
+
+    with pytest.raises(ValueError):
+        await graph.execute("error", {}, "error_session")
+```
+
+## Using Pytest Fixtures
+
+Fixtures can help you set up common test scenarios:
+
+```python
+@pytest.fixture
+def sample_graph():
+    graph = SmartGraph()
+    # Set up your graph structure
+    return graph
+
+@pytest.mark.asyncio
+async def test_with_fixture(sample_graph):
+    result, should_exit = await sample_graph.execute("start", {}, "test_session")
+    # Assert expected results
+```
 
 ## Conclusion
 
-Testing is an essential part of building reliable SmartGraph applications. By following best practices, mocking external dependencies, and utilizing the power of `pytest`, you can create well-tested applications that meet the needs of your users. Remember to focus on testing individual components, edge conditions, and various scenarios to ensure comprehensive coverage.
+Effective testing is crucial for building reliable SmartGraph applications. By following these best practices and leveraging pytest's features, you can ensure that your workflows behave correctly under various conditions. Remember to test individual components, mock external dependencies, and verify the behavior of your entire graph execution.
+
+As you develop more complex SmartGraph applications, consider implementing integration tests and exploring advanced testing techniques to further improve the reliability of your AI-driven workflows.

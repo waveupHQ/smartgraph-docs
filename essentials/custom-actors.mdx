@@ -5,103 +5,184 @@ description: >-
 icon: "gear"
 ---
 
-## Why Create Custom Actors?
+---
 
-Custom actors allow you to:
+title: "Custom Actors and Actions"
+description: "Learn how to extend SmartGraph with custom actors and actions to integrate specialized functionality"
 
-- **Integrate External Systems:** Interact with databases, APIs, and other external services.
-- **Perform Specialized Tasks:** Execute complex logic, calculations, or data manipulations that are not well-suited for AI models.
-- **Encapsulate Reusable Logic:** Create modular components that can be easily reused across different workflows.
+---
 
-## Creating a Custom Actor
+SmartGraph's power lies in its extensibility. By creating custom actors and actions, you can integrate specialized functionality and tailor your application to specific use cases.
 
-To create a custom actor, you need to:
+## Creating Custom Actors
 
-1. **Define a Class:** Create a new Python class that inherits from the `smartgraph.base.BaseActor` abstract class.
-2. **Implement `perform_task()`:** Override the abstract method `perform_task()`, which will be called by SmartGraph when the actor's node is executed.
+Custom actors allow you to extend SmartGraph's capabilities beyond the built-in `HumanActor` and `AIActor`. Here's how to create a custom actor:
 
-### Example: Database Actor
+<Steps>
+  <Step title="Import necessary modules">
+    ```python
+    from smartgraph.base import BaseActor
+    from smartgraph.memory import MemoryManager
+    ```
+  </Step>
+  <Step title="Define your custom actor class">
+    Inherit from `BaseActor` and implement the `perform_task` method:
 
-Let's create a custom actor that interacts with a database:
+    ```python
+    class CustomActor(BaseActor):
+        def __init__(self, name: str, memory_manager: MemoryManager, **kwargs):
+            super().__init__(name, memory_manager)
+            # Initialize any additional attributes here
+
+        async def perform_task(self, task, input_data, state):
+            # Implement the logic for performing tasks
+            # Return a dictionary with the result
+            return {"result": "Task completed"}
+    ```
+
+  </Step>
+  <Step title="Use your custom actor in a node">
+    ```python
+    from smartgraph import Node, Task
+
+    custom_actor = CustomActor("MyCustomActor", memory_manager)
+    custom_node = Node(id="custom_action", actor=custom_actor, task=Task(description="Perform custom action"))
+    ```
+
+  </Step>
+</Steps>
+
+## Defining Custom Actions
+
+Custom actions are Python functions that encapsulate specific behaviors within your actors. Here's how to define and use custom actions:
 
 ```python
-from smartgraph.base import BaseActor, Task
+class DatabaseActor(BaseActor):
+    def __init__(self, name: str, memory_manager: MemoryManager, db_connection):
+        super().__init__(name, memory_manager)
+        self.db_connection = db_connection
+
+    async def perform_task(self, task, input_data, state):
+        if task.description == "query_database":
+            return await self.query_database(input_data.get("query"))
+        # ... other task handlers ...
+
+    async def query_database(self, query):
+        # Implement database query logic here
+        result = self.db_connection.execute(query)
+        return {"result": result}
+```
+
+## Examples of Custom Actors
+
+Let's look at some common use cases for custom actors:
+
+### 1. Database Interaction Actor
+
+```python
+import asyncpg
 
 class DatabaseActor(BaseActor):
-    def __init__(self, name: str, database_connection: Any):
-        super().__init__(name)
-        self.database_connection = database_connection
+    def __init__(self, name: str, memory_manager: MemoryManager, db_url: str):
+        super().__init__(name, memory_manager)
+        self.db_url = db_url
+        self.connection = None
 
-    async def perform_task(self, task: Task, input_data: dict, state: dict) -> dict:
-        if task.description == "Save data to database":
-            # Code to save data to the database using self.database_connection
-            return {"status": "Data saved successfully"}
-        elif task.description == "Retrieve data from database":
-            # Code to retrieve data from the database
-            return {"data": retrieved_data}
-        else:
-            raise ValueError(f"Unsupported task: {task.description}")
+    async def connect(self):
+        self.connection = await asyncpg.connect(self.db_url)
+
+    async def perform_task(self, task, input_data, state):
+        if not self.connection:
+            await self.connect()
+
+        if task.description == "execute_query":
+            query = input_data.get("query")
+            result = await self.connection.fetch(query)
+            return {"result": result}
+
+        return {"error": "Unsupported task"}
 ```
 
-In this example:
-
-- We initialize the `DatabaseActor` with a database connection object.
-- The `perform_task()` method handles different database operations based on the `task.description`.
-
-## Using Custom Actions within Actors
-
-You can further customize your actors by defining custom actions using Python functions. These functions can encapsulate complex logic and be called within the `perform_task()` method.
-
-### Example: API Call Action
+### 2. API Call Actor
 
 ```python
-import requests
-
-def make_api_call(url: str, params: dict) -> dict:
-    response = requests.get(url, params=params)
-    response.raise_for_status() # Raise an exception if there's an HTTP error
-    return response.json()
+import aiohttp
 
 class APIActor(BaseActor):
-    def __init__(self, name: str):
-        super().__init__(name)
+    def __init__(self, name: str, memory_manager: MemoryManager, base_url: str):
+        super().__init__(name, memory_manager)
+        self.base_url = base_url
 
-    async def perform_task(self, task: Task, input_data: dict, state: dict) -> dict:
-        if task.description == "Fetch data from API":
-            url = task.prompt.format(**input_data) # Assuming prompt contains API URL template
-            api_data = make_api_call(url, input_data.get("api_params", {}))
-            return {"api_data": api_data}
-        else:
-            raise ValueError(f"Unsupported task: {task.description}")
+    async def perform_task(self, task, input_data, state):
+        if task.description == "get_data":
+            endpoint = input_data.get("endpoint")
+            params = input_data.get("params", {})
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{self.base_url}/{endpoint}", params=params) as response:
+                    data = await response.json()
+                    return {"result": data}
+
+        return {"error": "Unsupported task"}
 ```
 
-Here, we define a `make_api_call` function that handles making API requests. The `APIActor` uses this function to fetch data from an API based on the provided URL and parameters.
-
-## Integrating Custom Actors in a SmartGraph
-
-To use your custom actor in a SmartGraph:
-
-1. **Instantiate the Actor:** Create an instance of your custom actor, providing any necessary parameters.
-2. **Create a Node:** Create a `Node` instance, associating it with your custom actor and a `Task`.
-3. **Add to the Graph:** Add the node to your SmartGraph instance.
-
-**Example:**
+### 3. File Processing Actor
 
 ```python
-database_actor = DatabaseActor("Database", database_connection)
-save_data_node = Node(
-    id="save_data",
-    actor=database_actor,
-    task=Task(description="Save data to database"),
-)
-graph.add_node(save_data_node)
+import aiofiles
+
+class FileProcessorActor(BaseActor):
+    def __init__(self, name: str, memory_manager: MemoryManager):
+        super().__init__(name, memory_manager)
+
+    async def perform_task(self, task, input_data, state):
+        if task.description == "read_file":
+            file_path = input_data.get("file_path")
+            async with aiofiles.open(file_path, mode='r') as file:
+                content = await file.read()
+                return {"content": content}
+
+        elif task.description == "write_file":
+            file_path = input_data.get("file_path")
+            content = input_data.get("content")
+            async with aiofiles.open(file_path, mode='w') as file:
+                await file.write(content)
+                return {"status": "File written successfully"}
+
+        return {"error": "Unsupported task"}
 ```
 
-## Common Use Cases
+## Custom Actor Lifecycle
 
-- **Database Interactions:** Create actors to perform CRUD operations on a database.
-- **API Calls:** Build actors that fetch or send data to external APIs.
-- **File Operations:** Define actors for reading, writing, or processing files.
-- **Data Transformations:** Create actors to clean, transform, or analyze data.
+Here's a diagram illustrating the lifecycle of a custom actor in SmartGraph:
 
-By defining custom actors, you can extend SmartGraph's capabilities to suit your specific application requirements and build a wide range of powerful and intelligent applications.
+```mermaid
+stateDiagram-v2
+    [*] --> Initialized: Create Actor
+    Initialized --> Ready: Add to Node
+    Ready --> Executing: perform_task called
+    Executing --> Ready: Task Completed
+    Executing --> Error: Exception Occurred
+    Error --> Ready: Error Handled
+    Ready --> [*]: Graph Execution Ends
+
+    style Initialized fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style Ready fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style Executing fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style Error fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+
+    linkStyle default stroke:#ff0000,stroke-width:2px,stroke-dasharray: 5 5
+```
+
+## Best Practices for Custom Actors
+
+1. **Error Handling**: Implement robust error handling in your custom actors to prevent graph execution from crashing.
+2. **Asynchronous Design**: Use asynchronous programming patterns to ensure your custom actors don't block the event loop.
+3. **Stateless Design**: Design your actors to be stateless where possible, relying on the `MemoryManager` for persistent state.
+4. **Documentation**: Provide clear documentation for your custom actors, including expected inputs and outputs.
+5. **Testing**: Write unit tests for your custom actors to ensure they behave as expected in isolation.
+
+<Card title="Next Steps" icon="arrow-right" href="/essentials/debugging">
+  Learn how to implement effective error handling and debugging techniques in
+  the [Debugging](/essentials/debugging) guide.
+</Card>

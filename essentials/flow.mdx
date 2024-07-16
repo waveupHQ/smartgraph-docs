@@ -1,91 +1,170 @@
 ---
-title: "Controlling Flow"
-description: >-
-  SmartGraph's power lies in its ability to create dynamic and responsive workflows. Edges, combined with conditional logic, are the key to defining how your application progresses from one step to the next.
-icon: "option"
+title: "Controlling Flow: Edges and Conditional Logic"
+sidebarTitle: "Flow"
+description: "Learn how to define transitions and implement dynamic decision-making in SmartGraph workflows"
+icon: "code-branch"
 ---
 
-# Controlling Flow: Edges and Conditional Logic
+Understanding how to control the flow of execution in your SmartGraph applications is crucial for building dynamic and responsive AI-driven workflows. This guide focuses on using edges and conditional logic to define transitions between nodes and implement decision-making processes.
 
-SmartGraph's power lies in its ability to create dynamic and responsive workflows. Edges, combined with conditional logic, are the key to defining how your application progresses from one step to the next.
+## Basic Edge Creation
 
-## Edges: The Pathways of Your Workflow
-
-Edges define the transitions between nodes in your SmartGraph. They determine the direction of flow and create the pathways for your application logic. Each edge connects a source node to a target node, indicating that after the source node's task is executed, the workflow should proceed to the target node.
-
-**Creating a Simple Edge:**
+Edges in SmartGraph define the possible transitions between nodes. Here's how to create a simple edge:
 
 ```python
 from smartgraph import Edge
 
-edge = Edge(source_id="node_A", target_id="node_B")
+# Create an edge from node_a to node_b
+edge = Edge(source_id="node_a", target_id="node_b")
+
+# Add the edge to your graph
+graph.add_edge(edge)
 ```
 
-This edge establishes a direct transition from `node_A` to `node_B`. When `node_A` completes, the workflow will automatically move to `node_B`.
+This creates a direct, unconditional transition from `node_a` to `node_b`.
 
-## Conditional Logic: Making Dynamic Decisions
+## Conditional Edges
 
-Simple edges create linear workflows, but SmartGraph allows you to introduce branching and decision-making using conditions. Conditions are boolean expressions (returning `True` or `False`) that determine whether an edge is valid. Only valid edges are followed during execution.
-
-**Adding a Condition to an Edge:**
+Conditional edges allow you to implement dynamic branching based on the current state or output of a node. To create a conditional edge, you need to define a condition function:
 
 ```python
-edge = Edge(
-    source_id="ask_question",
-    target_id="provide_answer",
-    condition=lambda data: data['user_response'] == 'yes'
+def is_high_priority(data):
+    return data.get('priority', 0) > 7
+
+high_priority_edge = Edge(
+    source_id="triage",
+    target_id="urgent_processing",
+    condition=is_high_priority
 )
+
+normal_priority_edge = Edge(
+    source_id="triage",
+    target_id="normal_processing",
+    condition=lambda data: not is_high_priority(data)
+)
+
+graph.add_edge(high_priority_edge)
+graph.add_edge(normal_priority_edge)
 ```
 
-In this example, the edge from `ask_question` to `provide_answer` will only be followed if the value associated with the key `'user_response'` in the current data is equal to `'yes'`.
+In this example, the workflow will branch based on the priority level of the task.
 
 ## Types of Conditions
 
-You can use various types of conditions to create flexible workflow logic:
+You can use various types of conditions to control the flow of your SmartGraph application:
 
 ### 1. Data-Based Conditions
 
-These conditions evaluate data that is passed between nodes or stored in the short-term memory.
-
-**Example:**
+These conditions evaluate the data passed between nodes:
 
 ```python
-# Check if the user's age is greater than 18
-condition = lambda data: data['user_age'] > 18
+def is_valid_input(data):
+    return 'user_input' in data and len(data['user_input']) > 0
 
-# Check if the user selected a specific option
-condition = lambda data: data['user_choice'] == 'option_A'
+validation_edge = Edge(
+    source_id="get_input",
+    target_id="process_input",
+    condition=is_valid_input
+)
+
+retry_edge = Edge(
+    source_id="get_input",
+    target_id="request_input",
+    condition=lambda data: not is_valid_input(data)
+)
 ```
 
 ### 2. State-Based Conditions
 
-These conditions examine the state of the application, including data stored in the long-term memory or the state of individual nodes.
-
-**Example:**
+These conditions check the current state of the application or specific nodes:
 
 ```python
-# Check if a user is logged in (assuming 'is_logged_in' is stored in long-term memory)
-condition = lambda data: graph.memory_manager.get_long_term('is_logged_in')
+def has_sufficient_balance(data):
+    return data.get('account_balance', 0) >= 100
 
-# Check if a node has been executed before (using node's internal state)
-condition = lambda data: node.state.get('has_been_executed', False)
+process_transaction_edge = Edge(
+    source_id="check_balance",
+    target_id="process_transaction",
+    condition=has_sufficient_balance
+)
+
+insufficient_funds_edge = Edge(
+    source_id="check_balance",
+    target_id="display_error",
+    condition=lambda data: not has_sufficient_balance(data)
+)
 ```
 
 ### 3. Complex Conditions
 
-You can combine multiple conditions using logical operators (`and`, `or`, `not`) to create more complex decision-making logic.
-
-**Example:**
+You can combine multiple conditions for more complex decision-making:
 
 ```python
-# Check if the user is logged in AND their age is over 21
-condition = lambda data: graph.memory_manager.get_long_term('is_logged_in') and data['user_age'] > 21
+def is_eligible_for_discount(data):
+    return (
+        data.get('customer_type') == 'loyal' and
+        data.get('purchase_amount', 0) > 500 and
+        data.get('has_coupon', False)
+    )
+
+apply_discount_edge = Edge(
+    source_id="evaluate_purchase",
+    target_id="apply_discount",
+    condition=is_eligible_for_discount
+)
+
+normal_checkout_edge = Edge(
+    source_id="evaluate_purchase",
+    target_id="normal_checkout",
+    condition=lambda data: not is_eligible_for_discount(data)
+)
 ```
 
-## Benefits of Conditional Logic
+## Visualizing Flow Control
 
-- **Dynamic Workflows:** Create workflows that adapt to user input, preferences, and changing application state.
-- **Personalized Experiences:** Tailor the flow of execution to provide customized experiences for individual users.
-- **Complex Decision-Making:** Implement sophisticated logic to handle various scenarios and edge cases.
+Here's a diagram illustrating flow control in a simple SmartGraph application:
 
-By mastering edges and conditional logic in SmartGraph, you can build truly intelligent and interactive applications that respond dynamically to the needs of your users.
+```mermaid
+graph TD
+    A[Start] --> B{Triage}
+    B -->|High Priority| C[Urgent Processing]
+    B -->|Normal Priority| D[Normal Processing]
+    C --> E{Valid Input?}
+    D --> E
+    E -->|Yes| F[Process Input]
+    E -->|No| G[Request New Input]
+    G --> E
+    F --> H[End]
+
+    style A fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style B fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style C fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style D fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style E fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style F fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style G fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style H fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+
+    linkStyle default stroke:#ff0000,stroke-width:2px,stroke-dasharray: 5 5
+```
+
+This diagram shows how conditional edges can create branching logic and loops in your workflow.
+
+## Best Practices for Flow Control
+
+1. **Keep conditions simple**: Try to make each condition check for a single, clear criterion.
+2. **Use meaningful names**: Give your edges and condition functions descriptive names that reflect their purpose.
+3. **Handle all cases**: Ensure that you have edges to handle all possible outcomes of a condition.
+4. **Avoid circular dependencies**: Be careful not to create infinite loops in your graph structure.
+5. **Document complex flows**: For complicated workflows, consider creating a diagram or detailed documentation to explain the flow logic.
+
+## Conclusion
+
+Mastering flow control in SmartGraph allows you to create dynamic, responsive AI applications that can adapt to various inputs and states. By effectively using edges and conditional logic, you can build sophisticated workflows that make intelligent decisions based on data and application state.
+
+Remember that while powerful, complex flow control can also make your application harder to understand and maintain. Strive for a balance between flexibility and simplicity in your graph structure.
+
+<Card title="Next Steps" icon="arrow-right" href="/essentials/state">
+  Learn how to manage and persist application state in the [State
+  Management](/essentials/state) guide.
+</Card>

@@ -1,80 +1,126 @@
 ---
-title: "Quickstart"
-description: "SmartGraph is a powerful library for building stateful, multi-actor applications with Large Language Models (LLMs). This guide will walk you through the basic usage of SmartGraph."
+title: "Quickstart Guide"
+description: "Get up and running with SmartGraph in minutes"
+mode: "wide"
 ---
 
-## Creating a Graph
+Welcome to the SmartGraph quickstart guide! This tutorial will walk you through creating a simple conversational application using SmartGraph.
 
-To create a graph, you'll use the `SmartGraph` class:
+## Installation
 
-```python
-from smartgraph import SmartGraph, Node, Edge, HumanActor, AIActor, Task
+<Steps>
+  <Step title="Install SmartGraph">
+    Use pip to install SmartGraph and its dependencies:
 
-# Create a new graph
-graph = SmartGraph()
+    ```bash
+    pip install smartgraph
+    ```
 
-# Create actors
-human_actor = HumanActor("User")
-ai_actor = AIActor("AI", assistant=your_assistant)
+  </Step>
+  <Step title="Install an LLM library">
+    SmartGraph works with various LLM libraries. For this example, we'll use `phidata`:
 
-# Create nodes
-start_node = Node("start", human_actor, Task(description="Start the conversation"))
-ai_response_node = Node("ai_response", ai_actor, Task(description="AI response"))
-human_feedback_node = Node("human_feedback", human_actor, Task(description="Human feedback"))
+    ```bash
+    pip install phidata
+    ```
 
-# Add nodes to the graph
-graph.add_node(start_node)
-graph.add_node(ai_response_node)
-graph.add_node(human_feedback_node)
+  </Step>
+</Steps>
 
-# Create and add edges
-graph.add_edge(Edge(start_node.id, ai_response_node.id))
-graph.add_edge(Edge(ai_response_node.id, human_feedback_node.id))
-graph.add_edge(Edge(human_feedback_node.id, ai_response_node.id))
-```
+## Creating Your First SmartGraph Application
 
-## Executing the Graph
+Let's create a simple conversational app that greets the user, asks for their name, and responds.
 
-To execute the graph:
+<Steps>
+  <Step title="Import necessary modules">
+    ```python
+    from smartgraph import SmartGraph, Node, Edge, HumanActor, AIActor, Task
+    from phi.assistant import Assistant
+    from phi.llm.openai import GPT35Turbo
+    ```
+  </Step>
+  <Step title="Set up the AI assistant">
+    ```python
+    assistant = Assistant(llm=GPT35Turbo(api_key="YOUR_OPENAI_API_KEY"))
+    ```
+    <Callout type="warning">
+      Remember to replace "YOUR_OPENAI_API_KEY" with your actual OpenAI API key.
+    </Callout>
+  </Step>
+  <Step title="Create actors and tasks">
+    ```python
+    human = HumanActor("User")
+    ai = AIActor("AI", assistant=assistant)
 
-```python
-async def run_graph():
-    final_output, should_exit = await graph.execute("start", {"initial_input": "Hello"}, "conversation_1")
+    greet_task = Task(description="Greet the user", prompt="Hello! What's your name?")
+    respond_task = Task(description="Respond to the user",
+                        prompt="Nice to meet you, {input[user_name]}! How can I assist you today?")
+    ```
+
+  </Step>
+  <Step title="Create nodes">
+    ```python
+    greet_node = Node(id="greet", actor=ai, task=greet_task)
+    get_name_node = Node(id="get_name", actor=human, task=Task(description="Get user's name"))
+    respond_node = Node(id="respond", actor=ai, task=respond_task)
+    ```
+  </Step>
+  <Step title="Construct the graph">
+    ```python
+    graph = SmartGraph()
+    for node in [greet_node, get_name_node, respond_node]:
+        graph.add_node(node)
+
+    graph.add_edge(Edge(source_id="greet", target_id="get_name"))
+    graph.add_edge(Edge(source_id="get_name", target_id="respond"))
+    ```
+
+  </Step>
+  <Step title="Execute the graph">
+    ```python
+    final_output, should_exit = graph.execute("greet", {}, "conversation_1")
     print("Final output:", final_output)
-    print("Should exit:", should_exit)
+    ```
+  </Step>
+</Steps>
 
-import asyncio
-asyncio.run(run_graph())
+## Understanding the Flow
+
+Here's a simple diagram illustrating the flow of our quickstart application:
+
+```mermaid
+graph TD
+    A[Start] --> B[Greet User]
+    B --> C[Get User's Name]
+    C --> D[Respond to User]
+    D --> E[End]
+
+    style A fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style E fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style B fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style C fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style D fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+
+    linkStyle default stroke:#ff0000,stroke-width:2px,stroke-dasharray: 5 5
+
+
 ```
 
-## Visualizing the Graph
+Next Steps
+Now that you've created your first SmartGraph application, you can explore more advanced features:
 
-You can visualize your graph using the `draw_graph` method:
-
-```python
-graph.draw_graph("my_graph.png")
-```
-
-This will save a visualization of your graph to "my_graph.png".
-
-## Using Checkpoints
-
-SmartGraph automatically manages checkpoints during execution. You can configure the checkpoint frequency when creating your SmartGraph instance:
-
-```python
-graph = SmartGraph(checkpoint_frequency=10)  # Save a checkpoint every 10 nodes
-```
-
-## Error Handling and Logging
-
-SmartGraph provides robust error handling and logging capabilities. You can access the logger like this:
-
-```python
-from smartgraph.logging import SmartGraphLogger
-
-logger = SmartGraphLogger.get_logger()
-logger.info("This is an info message")
-logger.error("This is an error message")
-```
-
-For more advanced usage and configuration options, please refer to the API documentation.
+<CardGroup cols={2}>
+  <Card title="Custom Actors" icon="user-gear" href="/essentials/custom-actors">
+    Create specialized actors for complex tasks
+  </Card>
+  <Card title="Conditional Edges" icon="code-branch" href="/essentials/flow">
+    Add branching logic to your conversation flow
+  </Card>
+  <Card title="State Management" icon="database" href="/essentials/state">
+    Utilize short-term and long-term memory
+  </Card>
+  <Card title="Error Handling" icon="bug" href="/essentials/debugging">
+    Implement robust error handling and logging
+  </Card>
+</CardGroup>
+For more detailed information on these topics and more, check out our section `essentials`.

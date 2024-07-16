@@ -44,14 +44,18 @@
       "group": "Essentials",
       "pages": [
         "essentials/concepts",
-        "essentials/state",
         "essentials/flow",
+        "essentials/state",
         "essentials/persistence",
         "essentials/assistants",
         "essentials/custom-actors",
         "essentials/debugging",
         "essentials/testing"
       ]
+    },
+    {
+      "group": "Advanced",
+      "pages": ["advanced/performance", "advanced/graph-operations"]
     },
     {
       "group": "API Documentation",
@@ -64,7 +68,21 @@
     },
     {
       "group": "Examples",
-      "pages": ["examples/simple-chat"]
+      "pages": [
+        "examples/cookbook",
+        "examples/simple-chat",
+        "examples/customer-support",
+        "examples/personal-assistant",
+        "examples/data-analysis",
+        "examples/document-summarization",
+        "examples/content-creation",
+        "examples/code-review",
+        "examples/investment-advisor",
+        "examples/api-integration",
+        "examples/database-operations",
+        "examples/multi-agent",
+        "examples/adaptive-learning"
+      ]
     }
   ],
   "footerSocials": {

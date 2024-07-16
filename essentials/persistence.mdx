@@ -1,52 +1,108 @@
 ---
 title: "Persistence and Checkpointing"
-description: >-
-  Building applications that can remember past interactions and maintain state over time is essential for creating engaging and personalized experiences. SmartGraph provides built-in support for persistence and checkpointing, allowing you to save and restore your application's state with ease.
+description: "Learn how to save and restore application state in SmartGraph for persistent conversations and long-running workflows."
 icon: "flag"
+sidebarTitle: Persistence
+mode: "wide"
 ---
 
-## The Importance of Persistence
+Persistence is crucial for building applications that can maintain context over time, resume interrupted workflows, and provide personalized experiences. SmartGraph offers built-in support for persistence through its checkpointing mechanism.
 
-Persistence is crucial for applications that involve:
+## Understanding Persistence in SmartGraph
 
-- **Extended Conversations:** Chatbots, virtual assistants, and other conversational interfaces need to remember past interactions to maintain context and provide relevant responses.
-- **User-Specific Data:** Applications that store user preferences, profile information, or progress need to persist this data between sessions.
-- **Long-Running Workflows:** Workflows that might be interrupted or take a long time to complete benefit from checkpointing to avoid losing progress.
+SmartGraph's persistence capabilities allow you to:
 
-## Checkpointing with `CheckpointManager`
+- Save the state of your application at specific points in time
+- Restore the application state from a previous checkpoint
+- Create long-running conversations that can span multiple sessions
+- Implement robust error recovery mechanisms
 
-SmartGraph's `CheckpointManager` handles the saving and loading of checkpoints, representing snapshots of your application's state at specific points in time.
+## The CheckpointManager
 
-### Configuring Checkpoint Frequency
+At the heart of SmartGraph's persistence system is the `CheckpointManager`. This component is responsible for saving and loading checkpoints, which represent snapshots of your application's state.
+
+### How Checkpointing Works
+
+```mermaid
+graph TD
+    A[Start Execution] -->|Every N nodes| B[Save Checkpoint]
+    B --> C[Continue Execution]
+    C -->|Interruption| D[Load Latest Checkpoint]
+    D --> E[Resume Execution]
+
+    style A fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style B fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style C fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style D fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+    style E fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+
+    linkStyle default stroke:#ff0000,stroke-width:2px,stroke-dasharray: 5 5
+```
+
+## Configuring Checkpoint Frequency
 
 You can control how often checkpoints are saved by setting the `checkpoint_frequency` parameter when creating your `SmartGraph` instance:
 
 ```python
-graph = SmartGraph(checkpoint_frequency=5)  # Save a checkpoint every 5 nodes
+graph = SmartGraph(checkpoint_frequency=10)  # Save a checkpoint every 10 nodes
 ```
 
 The default frequency is 5 nodes. Adjust this value based on the complexity and duration of your workflow. More frequent checkpoints provide better resilience against interruptions but might incur a slight performance overhead.
 
-### Saving Checkpoints
+## Saving and Loading Checkpoints
 
-SmartGraph automatically saves checkpoints during execution based on the configured frequency. You don't need to manually call any methods to save checkpoints.
+SmartGraph handles checkpoint saving and loading automatically during graph execution. However, you can also manually trigger these operations if needed:
 
-### Restoring from Checkpoints
+```python
+# Manually save a checkpoint
+await graph.checkpoint_manager.save_checkpoint(thread_id, checkpoint)
 
-When you execute a SmartGraph, it automatically attempts to load the latest available checkpoint for the given thread ID. If a checkpoint is found, the application state is restored, and execution resumes from the point where the checkpoint was saved.
+# Load the latest checkpoint
+latest_checkpoint = await graph.checkpoint_manager.get_latest_checkpoint(thread_id)
+```
 
 ## Best Practices for Managing Checkpoints
 
-- **Choose an Appropriate Frequency:** Balance the need for resilience with performance considerations when setting the checkpoint frequency.
-- **Store Relevant Data:** Only include essential data in your checkpoints. Avoid storing large or unnecessary information that could impact performance.
-- **Consider Storage Options:** SmartGraph currently stores checkpoints as JSON files. For more complex scenarios or large-scale applications, you might consider using a database or other persistent storage mechanisms.
-- **Handle Checkpoint Errors:** Implement error handling to gracefully manage situations where checkpoints cannot be saved or loaded.
+To make the most of SmartGraph's persistence capabilities, consider the following best practices:
 
-## Benefits of Checkpointing
+<CardGroup cols={2}>
+  <Card title="Optimize Frequency" icon="clock">
+    Balance checkpoint frequency with performance needs. More frequent
+    checkpoints increase resilience but may impact speed.
+  </Card>
+  <Card title="Clean Up Regularly" icon="broom">
+    Implement a strategy to remove old or unnecessary checkpoints to manage
+    storage efficiently.
+  </Card>
+  <Card title="Validate Checkpoints" icon="check-double">
+    Periodically verify the integrity of saved checkpoints to ensure they can be
+    successfully restored.
+  </Card>
+  <Card title="Version Your Checkpoints" icon="code-branch">
+    If your application structure changes, ensure checkpoint compatibility or
+    implement a migration strategy.
+  </Card>
+</CardGroup>
 
-- **Resilience:** Protect against data loss due to interruptions or crashes.
-- **Persistent Conversations:** Maintain context and history across multiple user interactions.
-- **Resume Capabilities:** Allow users to resume workflows from where they left off.
-- **Improved User Experience:** Create a more seamless and engaging experience by preserving user-specific data and progress.
+## Error Handling and Recovery
 
-By effectively using SmartGraph's checkpointing features, you can build robust and reliable applications that provide a superior user experience.
+Implement robust error handling around checkpoint operations:
+
+```python
+try:
+    latest_checkpoint = await graph.checkpoint_manager.get_latest_checkpoint(thread_id)
+    # Restore state from the checkpoint
+except Exception as e:
+    logger.error(f"Failed to load checkpoint: {e}")
+    # Implement fallback logic or start from a clean state
+```
+
+## Conclusion
+
+Effective use of SmartGraph's persistence capabilities can significantly enhance the robustness and user experience of your applications. By leveraging checkpoints, you can create long-running, stateful workflows that can survive interruptions and provide personalized interactions over time.
+
+<Card title="Next Steps" icon="arrow-right" href="/essentials/assistants">
+  Now that you understand how to manage application state, learn about
+  integrating AI assistants in the [AI Assistants](/essentials/assistants)
+  guide.
+</Card>
