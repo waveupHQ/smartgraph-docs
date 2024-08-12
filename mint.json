@@ -29,10 +29,6 @@
     {
       "name": "Examples",
       "url": "examples"
-    },
-    {
-      "name": "API Reference",
-      "url": "api-reference"
     }
   ],
   "navigation": [
@@ -44,27 +40,18 @@
       "group": "Essentials",
       "pages": [
         "essentials/concepts",
-        "essentials/flow",
+        "essentials/pipeline",
         "essentials/state",
         "essentials/persistence",
-        "essentials/assistants",
-        "essentials/custom-actors",
+        "essentials/ai-assistants",
+        "essentials/custom-component",
         "essentials/debugging",
         "essentials/testing"
       ]
     },
     {
       "group": "Advanced",
-      "pages": ["advanced/performance", "advanced/graph-operations"]
-    },
-    {
-      "group": "API Documentation",
-      "pages": [
-        "api-reference/introduction",
-        "api-reference/endpoint/get",
-        "api-reference/endpoint/create",
-        "api-reference/endpoint/delete"
-      ]
+      "pages": ["advanced/tools"]
     },
     {
       "group": "Examples",

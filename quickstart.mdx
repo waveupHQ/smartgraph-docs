@@ -4,123 +4,151 @@ description: "Get up and running with SmartGraph in minutes"
 mode: "wide"
 ---
 
-Welcome to the SmartGraph quickstart guide! This tutorial will walk you through creating a simple conversational application using SmartGraph.
+Welcome to SmartGraph! This guide will help you set up your first SmartGraph application in just a few minutes. We'll create a simple AI assistant that can answer questions and perform web searches.
+
+## Prerequisites
+
+- Python 3.11 or higher
+- pip (Python package installer)
 
 ## Installation
 
 <Steps>
   <Step title="Install SmartGraph">
-    Use pip to install SmartGraph and its dependencies:
 
-    ```bash
-    pip install smartgraph
-    ```
+First, let's install SmartGraph and its dependencies. Open your terminal and run:
 
-  </Step>
-  <Step title="Install an LLM library">
-    SmartGraph works with various LLM libraries. For this example, we'll use `phidata`:
-
-    ```bash
-    pip install phidata
-    ```
+```bash
+pip install smartgraph python-dotenv
+```
 
   </Step>
-</Steps>
 
-## Creating Your First SmartGraph Application
+  <Step title="Set Up Your Environment">
+Create a new directory for your project and navigate into it:
 
-Let's create a simple conversational app that greets the user, asks for their name, and responds.
+```bash
+mkdir my_smartgraph_app
+cd my_smartgraph_app
+```
 
-<Steps>
-  <Step title="Import necessary modules">
-    ```python
-    from smartgraph import SmartGraph, Node, Edge, HumanActor, AIActor, Task
-    from phi.assistant import Assistant
-    from phi.llm.openai import GPT35Turbo
-    ```
-  </Step>
-  <Step title="Set up the AI assistant">
-    ```python
-    assistant = Assistant(llm=GPT35Turbo(api_key="YOUR_OPENAI_API_KEY"))
-    ```
-    <Callout type="warning">
-      Remember to replace "YOUR_OPENAI_API_KEY" with your actual OpenAI API key.
-    </Callout>
-  </Step>
-  <Step title="Create actors and tasks">
-    ```python
-    human = HumanActor("User")
-    ai = AIActor("AI", assistant=assistant)
+Create a new file called `.env` in this directory and add your OpenAI API key:
 
-    greet_task = Task(description="Greet the user", prompt="Hello! What's your name?")
-    respond_task = Task(description="Respond to the user",
-                        prompt="Nice to meet you, {input[user_name]}! How can I assist you today?")
-    ```
+```
+OPENAI_API_KEY=your_api_key_here
+```
 
-  </Step>
-  <Step title="Create nodes">
-    ```python
-    greet_node = Node(id="greet", actor=ai, task=greet_task)
-    get_name_node = Node(id="get_name", actor=human, task=Task(description="Get user's name"))
-    respond_node = Node(id="respond", actor=ai, task=respond_task)
-    ```
-  </Step>
-  <Step title="Construct the graph">
-    ```python
-    graph = SmartGraph()
-    for node in [greet_node, get_name_node, respond_node]:
-        graph.add_node(node)
+Replace `your_api_key_here` with your actual OpenAI API key.
 
-    graph.add_edge(Edge(source_id="greet", target_id="get_name"))
-    graph.add_edge(Edge(source_id="get_name", target_id="respond"))
-    ```
+ </Step>
 
-  </Step>
-  <Step title="Execute the graph">
-    ```python
-    final_output, should_exit = graph.execute("greet", {}, "conversation_1")
-    print("Final output:", final_output)
-    ```
-  </Step>
-</Steps>
+  <Step title="Create Your First SmartGraph Application">
+Create a new file called `app.py` and add the following code:
 
-## Understanding the Flow
+```python
+import asyncio
+import os
 
-Here's a simple diagram illustrating the flow of our quickstart application:
+from dotenv import load_dotenv
 
-```mermaid
-graph TD
-    A[Start] --> B[Greet User]
-    B --> C[Get User's Name]
-    C --> D[Respond to User]
-    D --> E[End]
+from smartgraph import ReactiveSmartGraph
+from smartgraph.components import CompletionComponent, TextInputHandler
+from smartgraph.tools.duckduckgo_toolkit import DuckDuckGoToolkit
 
-    style A fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style E fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style B fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style C fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style D fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+# Load environment variables
+load_dotenv()
 
-    linkStyle default stroke:#ff0000,stroke-width:2px,stroke-dasharray: 5 5
+class SmartAssistant(ReactiveSmartGraph):
+    def __init__(self):
+        super().__init__()
+        pipeline = self.create_pipeline("Assistant")
 
+        pipeline.add_component(TextInputHandler("Input"))
+        pipeline.add_component(CompletionComponent(
+            "AIAssistant",
+            model="gpt-4o-mini",
+            api_key=os.getenv("OPENAI_API_KEY"),
+            system_context="You are a helpful assistant that can answer questions and perform web searches when needed.",
+            toolkits=[DuckDuckGoToolkit()]
+        ))
+
+        self.compile()
+
+    async def ask(self, question: str):
+        return await self.execute_and_await("Assistant", question)
+
+async def main():
+    assistant = SmartAssistant()
+
+    while True:
+        user_input = input("Ask me anything (or type 'exit' to quit): ")
+        if user_input.lower() == 'exit':
+            break
+
+        response = await assistant.ask(user_input)
+        print(f"Assistant: {response.get('ai_response', 'Sorry, I could not generate a response.')}")
+if __name__ == "__main__":
+    asyncio.run(main())
 
 ```
 
-Next Steps
-Now that you've created your first SmartGraph application, you can explore more advanced features:
+This script sets up a simple AI assistant that can answer questions and perform web searches when needed.
+
+</Step>
+
+<Step title="Run Your Application">
+
+Now, let's run your SmartGraph application:
+
+```bash
+python app.py
+```
+
+You should see a prompt asking you to input a question. Try asking various questions, including some that might require a web search.
+
+Example interaction:
+
+```
+Ask me anything (or type 'exit' to quit): What is the capital of France?
+Assistant: The capital of France is Paris.
+
+Ask me anything (or type 'exit' to quit): Who won the latest Nobel Prize in Literature?
+Assistant: I'll need to search for the most up-to-date information on that. One moment please...
+
+The latest Nobel Prize in Literature was awarded to Jon Fosse in 2023. Jon Fosse is a Norwegian author known for his minimalist style and work in various genres including novels, poetry, essays, children's books, and drama. He was awarded the prize "for his innovative plays and prose which give voice to the unsayable."
+
+Ask me anything (or type 'exit' to quit): exit
+```
+
+  </Step>
+</Steps>
+## What's Next?
+
+Congratulations! You've just created your first SmartGraph application. This simple example demonstrates the power of SmartGraph in creating reactive, AI-powered applications.
+
+To learn more and expand your SmartGraph skills, check out these resources:
 
 <CardGroup cols={2}>
-  <Card title="Custom Actors" icon="user-gear" href="/essentials/custom-actors">
-    Create specialized actors for complex tasks
+  <Card title="Core Concepts" icon="cube" href="./essentials/concepts">
+    Understand the fundamental building blocks of SmartGraph
   </Card>
-  <Card title="Conditional Edges" icon="code-branch" href="/essentials/flow">
-    Add branching logic to your conversation flow
+  <Card
+    title="Pipelines and Branching"
+    icon="code-branch"
+    href="./essentials/pipeline"
+  >
+    Learn how to create more complex workflows
   </Card>
-  <Card title="State Management" icon="database" href="/essentials/state">
-    Utilize short-term and long-term memory
+  <Card title="AI Assistants" icon="robot" href="./essentials/ai-assistants">
+    Dive deeper into creating sophisticated AI assistants
   </Card>
-  <Card title="Error Handling" icon="bug" href="/essentials/debugging">
-    Implement robust error handling and logging
+  <Card
+    title="Custom Components"
+    icon="puzzle-piece"
+    href="./essentials/custom-component"
+  >
+    Extend SmartGraph's functionality with your own components
   </Card>
 </CardGroup>
-For more detailed information on these topics and more, check out our section `essentials`.
+
+Happy coding with SmartGraph!
