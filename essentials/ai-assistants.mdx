@@ -1,0 +1,183 @@
+---
+title: "AI Assistants"
+sidebarTitle: "AI Assistants"
+description: "Learn how to integrate AI assistants into your SmartGraph applications using CompletionComponent"
+icon: "robot"
+---
+
+SmartGraph makes it easy to integrate powerful AI assistants into your applications using the `CompletionComponent`. This component allows you to leverage large language models (LLMs) like GPT-4 or Claude to create intelligent, context-aware applications. In this guide, we'll explore how to effectively use the `CompletionComponent` to build sophisticated AI assistants.
+
+## Basic Usage
+
+To get started with AI assistants in SmartGraph, you'll use the `CompletionComponent`. Here's a simple example:
+
+```python
+import asyncio
+import os
+from dotenv import load_dotenv
+from smartgraph.components import CompletionComponent
+from smartgraph.logging import SmartGraphLogger
+
+# Load environment variables
+load_dotenv()
+
+# Set up logging
+logger = SmartGraphLogger.get_logger()
+logger.set_level("INFO")
+
+async def main():
+    # Create a CompletionComponent
+    completion = CompletionComponent(
+        "AI_Completion",
+        model="claude-3-haiku-20240307",
+        temperature=0.7,
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+    )
+
+    user_input = "Explain reactive programming"
+    logger.info(f"Processing input: {user_input}")
+
+    try:
+        result = await completion.process({"message": user_input})
+
+        if "error" in result:
+            logger.error(f"Error during processing: {result['error']}")
+            print(f"\nAn error occurred: {result['error']}\n")
+        else:
+            logger.info(f"Received: {result}")
+            print(f"\nAI Response: {result.get('ai_response', 'No response')}\n")
+
+    except Exception as e:
+        logger.error(f"Unexpected error during processing: {str(e)}", exc_info=True)
+        print(f"\nAn unexpected error occurred: {str(e)}\n")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+In this example, we create a simple AI assistant that can answer questions about reactive programming.
+
+## Customizing the AI Assistant
+
+The `CompletionComponent` offers several customization options:
+
+### Model Selection
+
+Choose the AI model you want to use:
+
+```python
+CompletionComponent(
+    "AI_Completion",
+    model="claude-3-haiku-20240307",
+    api_key=os.getenv("ANTHROPIC_API_KEY"),
+)
+```
+
+### Temperature
+
+Control the randomness of the AI's responses:
+
+```python
+CompletionComponent(
+    "CreativeAssistant",
+    model="claude-3-haiku-20240307",
+    temperature=0.8,  # Higher temperature for more creative responses
+    api_key=os.getenv("ANTHROPIC_API_KEY"),
+)
+```
+
+### Streaming Responses
+
+Enable streaming for real-time responses:
+
+```python
+CompletionComponent(
+    "StreamingAssistant",
+    model="claude-3-haiku-20240307",
+    stream=True,
+    api_key=os.getenv("ANTHROPIC_API_KEY"),
+)
+```
+
+## Advanced Usage
+
+### Integrating External Knowledge
+
+Enhance your AI assistant with external knowledge using the DuckMemoryToolkit:
+
+```python
+import asyncio
+import os
+from dotenv import load_dotenv
+from smartgraph.components import CompletionComponent
+from smartgraph.tools.duck_memory_toolkit import DuckMemoryToolkit
+from smartgraph.logging import SmartGraphLogger
+
+# Load environment variables
+load_dotenv()
+
+# Set up logging
+logger = SmartGraphLogger.get_logger()
+logger.set_level("INFO")
+
+async def main():
+    # Initialize DuckMemoryToolkit
+    memory_toolkit = DuckMemoryToolkit("assistant_memory.duckdb")
+
+    # Create a CompletionComponent with DuckMemoryToolkit
+    completion = CompletionComponent(
+        "AI_Completion",
+        model="claude-3-haiku-20240307",
+        temperature=0.7,
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        toolkits=[memory_toolkit],
+    )
+
+    # Add some initial knowledge
+    await memory_toolkit.add_memory("python", {"language": "Python", "type": "Programming language", "creator": "Guido van Rossum"})
+
+    user_input = "Tell me about Python and its creator"
+    logger.info(f"Processing input: {user_input}")
+
+    try:
+        result = await completion.process({"message": user_input})
+
+        if "error" in result:
+            logger.error(f"Error during processing: {result['error']}")
+            print(f"\nAn error occurred: {result['error']}\n")
+        else:
+            logger.info(f"Received: {result}")
+            print(f"\nAI Response: {result.get('ai_response', 'No response')}\n")
+
+        # Store the interaction in memory
+        await memory_toolkit.add_memory(f"interaction_{user_input}", {"question": user_input, "answer": result.get('ai_response', 'No response')})
+
+    except Exception as e:
+        logger.error(f"Unexpected error during processing: {str(e)}", exc_info=True)
+        print(f"\nAn unexpected error occurred: {str(e)}\n")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+This setup allows the AI assistant to access and store information using the DuckMemoryToolkit, providing a way to maintain knowledge across sessions.
+
+## Best Practices
+
+1. **API Key Security**: Always use environment variables or secure key management systems for API keys.
+
+2. **Error Handling**: Implement robust error handling to manage potential issues with the AI service.
+
+3. **Logging**: Use the SmartGraphLogger for consistent logging across your application.
+
+4. **Memory Management**: When using memory toolkits, consider implementing a strategy for managing the growth of stored data.
+
+5. **Rate Limiting**: Implement rate limiting to avoid exceeding API quotas and manage costs.
+
+## Conclusion
+
+The `CompletionComponent` in SmartGraph provides a powerful way to integrate AI assistants into your applications. By leveraging its features and following best practices, you can create sophisticated, context-aware AI applications that enhance user experiences and automate complex tasks.
+
+## Next Steps
+
+Now that you understand how to integrate AI assistants using the `CompletionComponent` and enhance them with external knowledge, explore how to create custom components in the [Custom Components](./custom-component) section to further extend your SmartGraph applications.

@@ -1,104 +1,88 @@
 ---
 title: "Core Concepts"
-description: "Understanding the fundamental building blocks of SmartGraph"
+description: Learn about the fundamental building blocks of SmartGraph, including ReactiveSmartGraph, Pipeline, and ReactiveComponent.
 icon: "heart"
 ---
 
-SmartGraph is built on four core concepts: Actors, Tasks, Nodes, and Edges. Understanding these components and how they interact is crucial for creating effective SmartGraph applications.
+SmartGraph is built on a few key abstractions that work together to create powerful, flexible LLM applications. Understanding these core concepts is crucial to effectively using SmartGraph.
 
-## Actors: The Doers
+## ReactiveSmartGraph
 
-Actors are the entities that perform actions within your SmartGraph application. They are responsible for executing tasks and driving the application logic.
-
-SmartGraph provides three primary types of actors:
-
-1. **HumanActor**: Represents a human user interacting with the application.
-2. **AIActor**: Represents an AI agent powered by an LLM, capable of processing information and generating responses.
-3. **FunctionActor**: Represents a Python function, allowing integration of custom logic into your workflow.
+The `ReactiveSmartGraph` class is the heart of SmartGraph. It represents the entire application structure and manages the connections between different pipelines and components.
 
 ```python
-from smartgraph import HumanActor, AIActor
+from smartgraph import ReactiveSmartGraph
 
-human = HumanActor("User")
-ai_assistant = AIActor("AI Assistant", assistant=your_assistant)
+graph = ReactiveSmartGraph()
 ```
 
-## Tasks: The Actions
+Think of `ReactiveSmartGraph` as the main application container, similar to how you might think of a React app's root component.
 
-Tasks define the specific actions that actors perform. They encapsulate the instructions or prompts that guide an actor's behavior.
+## Pipeline
 
-A `Task` object contains:
-
-- `description`: A brief, human-readable description of the task.
-- `prompt`: (Optional) A more detailed prompt or instruction for the actor.
+A `Pipeline` is a sequence of connected components that process data. It's how you organize and structure your data flow within the graph.
 
 ```python
-from smartgraph import Task
-
-greet_task = Task(description="Greet the user", prompt="Hello! How can I assist you today?")
-analyze_task = Task(description="Analyze user data")
+pipeline = graph.create_pipeline("MyPipeline")
 ```
 
-## Nodes: The Steps
+Pipelines in SmartGraph are analogous to the way you might chain methods in a data processing library like Pandas, but with the added power of reactivity and complex branching.
 
-Nodes are the building blocks of your SmartGraph. They represent individual steps or stages within the workflow. Each node is associated with an actor and a task.
+## ReactiveComponent
+
+`ReactiveComponent` is the base class for all components in SmartGraph. It provides the core functionality for processing input data and managing state.
 
 ```python
-from smartgraph import Node
+from smartgraph import ReactiveComponent
 
-greet_node = Node(id="greet", actor=ai_assistant, task=greet_task)
-get_input_node = Node(id="get_input", actor=human, task=Task(description="Get user input"))
+class MyCustomComponent(ReactiveComponent):
+    def process(self, input_data):
+        # Process the input data
+        return processed_data
 ```
 
-## Edges: The Connections
-
-Edges define the transitions between nodes, establishing the flow of execution in your SmartGraph. They can have optional conditions to control the flow based on the application state or input data.
-
-```python
-from smartgraph import Edge
-
-simple_edge = Edge(source_id="greet", target_id="get_input")
-conditional_edge = Edge(
-    source_id="analyze",
-    target_id="respond",
-    condition=lambda data: data['sentiment'] == 'positive'
-)
-```
+Components in SmartGraph are similar to React components, but instead of rendering UI, they process data in your AI pipeline.
 
 ## Putting It All Together
 
-Here's a diagram illustrating how these concepts work together in a simple SmartGraph application:
+Here's how these concepts work together:
 
-```mermaid
-graph TD
-    A[Start] --> B[Greet User]
-    B --> C{User Input}
-    C -->|Positive| D[Positive Response]
-    C -->|Negative| E[Empathetic Response]
-    D --> F[End]
-    E --> F[End]
+1. You create a `ReactiveSmartGraph` instance.
+2. You add one or more `Pipeline`s to your graph.
+3. You add `ReactiveComponent`s to your pipelines.
+4. You connect components within and across pipelines as needed.
+5. Finally, you compile the graph and execute it.
 
-    style A fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style B fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style C fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style D fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style E fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style F fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
+Here's a simple example:
 
-    linkStyle default stroke:#ff0000,stroke-width:2px,stroke-dasharray: 5 5
+```bash
+export OPENAI_API_KEY=""
 ```
 
-In this diagram:
+```python
+from smartgraph import ReactiveSmartGraph
+from smartgraph.components import TextInputHandler, CompletionComponent
 
-- Nodes are represented by the boxes (Greet User, User Input, Positive Response, Empathetic Response)
-- Edges are the lines connecting the nodes
-- The diamond shape represents a decision point, which would be implemented using conditional edges
-- Actors (AI and Human) would be associated with each node, determining who performs each action
-- Tasks would define what action is performed at each node
+# Create the graph
+graph = ReactiveSmartGraph()
 
-By combining these core elements, you can build flexible and intelligent applications that leverage the power of both human and AI actors.
+# Create a pipeline
+pipeline = graph.create_pipeline("SimpleLLM")
 
-<Card title="Next Steps" icon="arrow-right" href="/essentials/flow">
-  Now that you understand the core concepts, learn how to control the flow of
-  your SmartGraph application in the [Controlling Flow](/essentials/flow) guide.
-</Card>
+# Add components to the pipeline
+pipeline.add_component(TextInputHandler("TextInput"))
+pipeline.add_component(CompletionComponent("LLM", model="gpt-4o-mini"))
+
+# Compile the graph
+graph.compile()
+
+# Execute the pipeline
+result = await graph.execute("SimpleLLM", "Tell me a joke")
+print(result)
+```
+
+In this example, we create a simple pipeline that takes text input and passes it to an LLM for completion.
+
+## Next Steps
+
+Now that you understand the core concepts of SmartGraph, you're ready to dive deeper into how to control the flow of data through your pipelines. Head over to the [Controlling Flow](./pipeline) section to learn more about creating dynamic workflows using pipelines and input handlers.

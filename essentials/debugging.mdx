@@ -1,181 +1,210 @@
 ---
 title: "Error Handling and Debugging"
-description: "Learn how to handle errors effectively and debug your SmartGraph applications"
-sidebarTitle: "Debugging"
+sidebarTitle: "Error Handling & Debugging"
+description: "Learn how to handle errors effectively and debug SmartGraph applications"
 icon: "bug"
 ---
 
-Robust error handling and effective debugging are crucial for building reliable SmartGraph applications. This guide will walk you through SmartGraph's exception hierarchy, error handling techniques, debugging strategies, and the use of logging.
+Effective error handling and debugging are crucial for building robust and maintainable SmartGraph applications. This guide will walk you through the best practices for handling errors and provide techniques for debugging your SmartGraph pipelines.
 
-## SmartGraph Exception Hierarchy
+## Error Handling
 
-SmartGraph uses a custom exception hierarchy to provide more specific error information. Here's an overview:
+SmartGraph provides several mechanisms for handling errors at different levels of your application.
 
-```mermaid
-graph TD
-    A[SmartGraphException] --> B[ExecutionError]
-    A --> C[ConfigurationError]
-    A --> D[ValidationError]
-    A --> E[MemoryError]
-    A --> F[GraphStructureError]
-    A --> G[ActorExecutionError]
+### Component-Level Error Handling
 
-    style A fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style B fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style C fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style D fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style E fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style F fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style G fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-
-    linkStyle default stroke:#ff0000,stroke-width:2px,stroke-dasharray: 5 5
-```
-
-- **SmartGraphException**: Base exception for all SmartGraph-related errors
-- **ExecutionError**: Raised when there's an error during node or workflow execution
-- **ConfigurationError**: Indicates issues with SmartGraph configuration
-- **ValidationError**: Raised for input or state validation errors
-- **MemoryError**: Occurs when there are issues with memory management
-- **GraphStructureError**: Indicates problems with the graph structure
-- **ActorExecutionError**: Raised when an actor fails to execute a task
-
-## Effective Error Handling
-
-Here are some best practices for handling errors in SmartGraph:
-
-### 1. Use try-except blocks
-
-Wrap potentially error-prone code in try-except blocks:
+Within a `ReactiveComponent`, you can handle errors in the `process` method:
 
 ```python
-from smartgraph.exceptions import ExecutionError, ConfigurationError
+from smartgraph import ReactiveComponent
+from smartgraph.exceptions import SmartGraphException
+
+class ErrorHandlingComponent(ReactiveComponent):
+    async def process(self, input_data: Any) -> Any:
+        try:
+            result = self.risky_operation(input_data)
+            return result
+        except Exception as e:
+            self.error.on_next(SmartGraphException(f"Error in {self.name}: {str(e)}"))
+            return {"error": str(e)}
+
+    def risky_operation(self, data):
+        # Implement potentially risky logic here
+        pass
+```
+
+By using `self.error.on_next()`, you can propagate errors up the pipeline, allowing for centralized error handling.
+
+### Pipeline-Level Error Handling
+
+When executing a pipeline, you can catch errors at the pipeline level:
+
+```python
+from smartgraph import ReactiveSmartGraph
+from smartgraph.exceptions import ExecutionError
+
+graph = ReactiveSmartGraph()
+# ... set up your pipeline ...
 
 try:
-    result = await graph.execute("start_node", input_data, "session_1")
+    result = await graph.execute_and_await("MyPipeline", input_data)
 except ExecutionError as e:
-    print(f"Execution failed: {e}")
-    # Handle execution error
-except ConfigurationError as e:
-    print(f"Configuration error: {e}")
-    # Handle configuration error
-except SmartGraphException as e:
-    print(f"An unexpected error occurred: {e}")
-    # Handle other SmartGraph errors
+    print(f"Pipeline execution failed: {str(e)}")
 ```
 
-### 2. Implement error recovery
+### Global Error Handling
 
-Design your graph to handle errors gracefully:
-
-```python
-def error_recovery_task(input_data, error):
-    # Implement error recovery logic
-    return {"recovered": True, "original_error": str(error)}
-
-error_recovery_node = Node(
-    id="error_recovery",
-    actor=FunctionActor("ErrorHandler", error_recovery_task),
-    task=Task(description="Handle errors and attempt recovery")
-)
-
-# Add error recovery edge
-graph.add_edge(Edge(source_id="main_task", target_id="error_recovery", condition=lambda data: "error" in data))
-```
-
-### 3. Use conditional edges for error handling
-
-Utilize conditional edges to route execution based on error states:
-
-```python
-def is_error(data):
-    return data.get("status") == "error"
-
-graph.add_edge(Edge(source_id="task_node", target_id="error_handler_node", condition=is_error))
-graph.add_edge(Edge(source_id="task_node", target_id="success_node", condition=lambda data: not is_error(data)))
-```
-
-## Debugging Strategies
-
-To effectively debug SmartGraph applications:
-
-1. **Use logging extensively**: Add log statements to track execution flow and state changes.
-2. **Leverage checkpoints**: Use SmartGraph's checkpointing feature to pause execution and inspect state.
-3. **Visualize the graph**: Use `graph.draw_graph()` to visualize your graph structure and identify issues.
-4. **Unit test actors and nodes**: Write unit tests for individual components to isolate issues.
-5. **Use a debugger**: Set breakpoints in your code and use a Python debugger to step through execution.
-
-## Logging with SmartGraphLogger
-
-SmartGraph provides a built-in logging system through the `SmartGraphLogger` class. Here's how to use it:
+For application-wide error handling, you can set up a global error handler:
 
 ```python
 from smartgraph.logging import SmartGraphLogger
 
 logger = SmartGraphLogger.get_logger()
 
-# Log at different levels
-logger.debug("Detailed debug information")
-logger.info("General information")
-logger.warning("Warning message")
-logger.error("Error message")
-logger.critical("Critical error message")
+def global_error_handler(error):
+    logger.error(f"Global error occurred: {str(error)}")
 
-# Configure logging level
-logger.set_level("DEBUG")
+# Set up your graph
+graph = ReactiveSmartGraph()
+# ... set up your pipelines ...
 
-# Add a file handler
-logger.add_file_handler("smartgraph.log", "INFO")
+# Set the global error handler
+for pipeline in graph.pipelines.values():
+    pipeline.error.subscribe(global_error_handler)
 ```
 
-### Best Practices for Logging
+## Debugging Techniques
 
-1. **Log important events**: Record significant actions, state changes, and decision points.
-2. **Include context**: Log relevant data to help understand the application state.
-3. **Use appropriate log levels**: Use debug for detailed information, info for general tracking, warning for potential issues, and error/critical for serious problems.
-4. **Don't log sensitive information**: Avoid logging passwords, API keys, or other sensitive data.
+Debugging SmartGraph applications requires a combination of reactive programming debugging techniques and SmartGraph-specific approaches.
 
-## Debugging Example: Tracing Execution Flow
+### Logging
 
-Here's an example of how to use logging to trace the execution flow of your SmartGraph application:
+Utilize SmartGraph's built-in logging system for comprehensive debugging:
 
 ```python
-from smartgraph import SmartGraph, Node, Edge, HumanActor, AIActor, Task
 from smartgraph.logging import SmartGraphLogger
 
 logger = SmartGraphLogger.get_logger()
 logger.set_level("DEBUG")
 
-class TracedAIActor(AIActor):
-    async def perform_task(self, task, input_data, state):
-        logger.debug(f"AIActor '{self.name}' starting task: {task.description}")
-        logger.debug(f"Input data: {input_data}")
-        logger.debug(f"Current state: {state}")
-
-        result = await super().perform_task(task, input_data, state)
-
-        logger.debug(f"AIActor '{self.name}' completed task. Result: {result}")
+class DebuggableComponent(ReactiveComponent):
+    async def process(self, input_data: Any) -> Any:
+        logger.debug(f"{self.name} received input: {input_data}")
+        result = self.some_operation(input_data)
+        logger.debug(f"{self.name} produced output: {result}")
         return result
-
-# Create your graph with traced actors
-graph = SmartGraph()
-ai_actor = TracedAIActor("DebugAI", assistant=your_assistant)
-# ... add nodes and edges ...
-
-# Execute the graph
-try:
-    final_output, should_exit = await graph.execute("start_node", input_data, "debug_session")
-    logger.info(f"Graph execution completed. Final output: {final_output}")
-except SmartGraphException as e:
-    logger.error(f"Graph execution failed: {e}")
 ```
 
-This example demonstrates how to use logging to trace the execution flow, input/output of tasks, and any errors that occur during graph execution.
+### State Inspection
+
+Inspect component state during debugging:
+
+```python
+class StatefulComponent(ReactiveComponent):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.create_state("my_state", 0)
+
+    async def process(self, input_data: Any) -> Any:
+        current_state = self.get_state("my_state").value
+        logger.debug(f"{self.name} current state: {current_state}")
+        # ... process logic ...
+        self.update_state("my_state", new_state)
+        logger.debug(f"{self.name} updated state: {new_state}")
+```
+
+### Reactive Debugging
+
+Use ReactiveX operators for debugging reactive streams:
+
+```python
+from reactivex import operators as ops
+
+class DebugComponent(ReactiveComponent):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.output = self.input.pipe(
+            ops.do_action(lambda x: print(f"Input received: {x}")),
+            ops.map(self.process),
+            ops.do_action(lambda x: print(f"Output produced: {x}"))
+        )
+```
+
+### Pipeline Visualization
+
+Use SmartGraph's visualization tools to understand your pipeline structure:
+
+```python
+from smartgraph.visualization import visualize_pipeline
+
+graph = ReactiveSmartGraph()
+# ... set up your pipeline ...
+
+visualize_pipeline(graph, "my_pipeline_visualization.png")
+```
+
+This will generate a visual representation of your pipeline, helping you understand the flow of data and identify potential issues.
+
+### Breakpoints and Debugging
+
+When using an IDE like PyCharm or VS Code, you can set breakpoints within your component's `process` methods to inspect the state and flow of data during execution.
+
+### Error Reproduction
+
+Create targeted test cases that reproduce errors:
+
+```python
+import pytest
+from smartgraph import ReactiveSmartGraph
+
+@pytest.mark.asyncio
+async def test_error_case():
+    graph = ReactiveSmartGraph()
+    # ... set up your pipeline with the error-prone scenario ...
+
+    with pytest.raises(ExpectedError):
+        await graph.execute_and_await("ErrorPipeline", error_triggering_input)
+```
+
+### Performance Profiling
+
+For performance-related issues, use Python's built-in `cProfile` or third-party tools like `line_profiler`:
+
+```python
+import cProfile
+
+def run_pipeline():
+    graph = ReactiveSmartGraph()
+    # ... set up your pipeline ...
+    result = await graph.execute_and_await("MyPipeline", input_data)
+
+cProfile.run('run_pipeline()')
+```
+
+## Best Practices for Error Handling and Debugging
+
+1. **Use Custom Exceptions**: Create custom exceptions for specific error scenarios in your SmartGraph applications.
+
+2. **Fail Fast**: Validate inputs early in your components to catch errors as soon as possible.
+
+3. **Provide Context**: Include relevant context (component name, input data, current state) when logging errors.
+
+4. **Graceful Degradation**: Design your components to handle partial failures and continue operating if possible.
+
+5. **Centralized Error Handling**: Implement a centralized error handling mechanism for consistent error management across your application.
+
+6. **Async-Aware Debugging**: Be mindful of the asynchronous nature of SmartGraph when debugging. Use `async`/`await` correctly in your debugging code.
+
+7. **Environment-Specific Debugging**: Set up different logging levels for development and production environments.
+
+8. **Error Metrics**: Implement error tracking and metrics to identify patterns and frequent issues in your SmartGraph applications.
 
 ## Conclusion
 
-Effective error handling and debugging are essential for building robust SmartGraph applications. By leveraging SmartGraph's exception hierarchy, implementing proper error handling techniques, and utilizing the `SmartGraphLogger`, you can create more reliable and maintainable AI-driven workflows.
+Effective error handling and debugging are essential skills for developing robust SmartGraph applications. By leveraging SmartGraph's built-in error handling mechanisms, utilizing reactive programming debugging techniques, and following best practices, you can create more reliable and maintainable AI pipelines.
 
-<Card title="Next Steps" icon="arrow-right" href="/advanced/performance">
-  Learn how to optimize your SmartGraph applications for performance in the
-  [Performance Optimization](/advanced/performance) guide.
-</Card>
+Remember that debugging reactive systems can be challenging due to their asynchronous and event-driven nature. Patience, systematic approaches, and a good understanding of both SmartGraph and ReactiveX will be your best allies in troubleshooting complex issues.
+
+## Next Steps
+
+Now that you're equipped with error handling and debugging techniques, learn how to test your SmartGraph applications thoroughly in the [Testing SmartGraph Applications](./testing) section.

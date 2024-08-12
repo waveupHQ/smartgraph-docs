@@ -1,0 +1,201 @@
+---
+title: "Creating Custom Components"
+sidebarTitle: "Custom Components"
+description: "Learn how to create and customize your own components in SmartGraph to extend its functionality"
+icon: "puzzle-piece"
+---
+
+Custom components are the building blocks that allow you to extend SmartGraph's functionality and create tailored solutions for your specific needs. In this guide, we'll explore the various ways to create custom components and dive into the options available to you.
+
+## Basic Custom Component
+
+At its core, a custom component in SmartGraph is a class that inherits from `ReactiveComponent`. Here's a basic template:
+
+```python
+from smartgraph import ReactiveComponent
+
+class MyCustomComponent(ReactiveComponent):
+    def __init__(self, name: str):
+        super().__init__(name)
+
+    async def process(self, input_data: Any) -> Any:
+        # Process the input data
+        result = self.custom_logic(input_data)
+        return result
+
+    def custom_logic(self, data):
+        # Implement your custom logic here
+        return data
+```
+
+The key method to implement is `process`, which defines how your component handles input data.
+
+## State Management in Custom Components
+
+You can add state to your custom components using the built-in state management methods:
+
+```python
+class StatefulComponent(ReactiveComponent):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.create_state("my_state", initial_value=0)
+
+    async def process(self, input_data: Any) -> Any:
+        current_state = self.get_state("my_state").value
+        new_state = current_state + 1
+        self.update_state("my_state", new_state)
+        return f"Processed {input_data} (State: {new_state})"
+```
+
+## Error Handling
+
+Implement robust error handling in your custom components:
+
+```python
+class ErrorHandlingComponent(ReactiveComponent):
+    async def process(self, input_data: Any) -> Any:
+        try:
+            # Process data
+            result = self.risky_operation(input_data)
+            return result
+        except Exception as e:
+            self.error.on_next(e)
+            return {"error": str(e)}
+
+    def risky_operation(self, data):
+        # Implement potentially risky logic here
+        pass
+```
+
+## Asynchronous Components
+
+For components that need to perform asynchronous operations:
+
+```python
+import aiohttp
+
+class AsyncAPIComponent(ReactiveComponent):
+    async def process(self, input_data: Any) -> Any:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"https://api.example.com/{input_data}") as response:
+                return await response.json()
+```
+
+## Components with External Dependencies
+
+If your component relies on external libraries or services:
+
+```python
+import openai
+
+class OpenAIComponent(ReactiveComponent):
+    def __init__(self, name: str, api_key: str):
+        super().__init__(name)
+        openai.api_key = api_key
+
+    async def process(self, input_data: Any) -> Any:
+        response = await openai.ChatCompletion.acreate(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": input_data}]
+        )
+        return response.choices[0].message.content
+```
+
+## Branching Components
+
+Create components that can direct flow based on input:
+
+```python
+class BranchingComponent(ReactiveComponent):
+    def __init__(self, name: str, condition_func):
+        super().__init__(name)
+        self.condition_func = condition_func
+
+    async def process(self, input_data: Any) -> Any:
+        if self.condition_func(input_data):
+            return {"branch": "true", "data": input_data}
+        else:
+            return {"branch": "false", "data": input_data}
+```
+
+## Components with Internal Buffers
+
+For components that need to accumulate data:
+
+```python
+class BufferingComponent(ReactiveComponent):
+    def __init__(self, name: str, buffer_size: int):
+        super().__init__(name)
+        self.create_state("buffer", [])
+        self.buffer_size = buffer_size
+
+    async def process(self, input_data: Any) -> Any:
+        buffer = self.get_state("buffer").value
+        buffer.append(input_data)
+        if len(buffer) > self.buffer_size:
+            buffer = buffer[-self.buffer_size:]
+        self.update_state("buffer", buffer)
+        return {"buffer_content": buffer, "buffer_size": len(buffer)}
+```
+
+## Components with Initialization and Cleanup
+
+For components that need setup and teardown operations:
+
+```python
+class DatabaseComponent(ReactiveComponent):
+    def __init__(self, name: str, db_url: str):
+        super().__init__(name)
+        self.db_url = db_url
+        self.db_connection = None
+
+    async def initialize(self):
+        # Set up database connection
+        self.db_connection = await create_db_connection(self.db_url)
+
+    async def process(self, input_data: Any) -> Any:
+        # Use self.db_connection to interact with the database
+        result = await self.db_connection.query(input_data)
+        return result
+
+    async def cleanup(self):
+        # Close database connection
+        if self.db_connection:
+            await self.db_connection.close()
+```
+
+## Composable Components
+
+Create higher-order components by composing existing ones:
+
+```python
+class ComposedComponent(ReactiveComponent):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.sub_component1 = SubComponent1("Sub1")
+        self.sub_component2 = SubComponent2("Sub2")
+
+    async def process(self, input_data: Any) -> Any:
+        intermediate_result = await self.sub_component1.process(input_data)
+        final_result = await self.sub_component2.process(intermediate_result)
+        return final_result
+```
+
+## Best Practices for Custom Components
+
+1. **Single Responsibility**: Each component should have a single, well-defined purpose.
+2. **Input Validation**: Validate input data at the beginning of the `process` method.
+3. **Error Handling**: Use try-except blocks to handle potential errors gracefully.
+4. **State Management**: Use the built-in state management methods for maintaining component state.
+5. **Asynchronous Design**: Utilize `async/await` for any I/O-bound operations.
+6. **Logging**: Implement logging to aid in debugging and monitoring.
+7. **Type Hinting**: Use type hints to improve code readability and catch potential type-related errors.
+8. **Documentation**: Provide clear docstrings explaining the component's purpose and usage.
+
+## Conclusion
+
+Creating custom components in SmartGraph allows you to extend its functionality to meet your specific needs. Whether you're integrating with external APIs, implementing complex business logic, or creating reusable building blocks for your AI pipelines, custom components provide the flexibility and power to build sophisticated AI applications.
+
+## Next Steps
+
+Now that you've learned how to create custom components, explore how to debug and test your SmartGraph applications in the [Debugging and Testing](./debugging) section.

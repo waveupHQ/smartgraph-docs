@@ -1,108 +1,185 @@
 ---
-title: "Persistence and Checkpointing"
-description: "Learn how to save and restore application state in SmartGraph for persistent conversations and long-running workflows."
-icon: "flag"
-sidebarTitle: Persistence
-mode: "wide"
+title: "Memory Toolkits"
+sidebarTitle: "Memory"
+description: "Learn how to use DuckMemoryToolkit and extend MemoryToolkit for persistent storage in SmartGraph applications"
+icon: "database"
 ---
 
-Persistence is crucial for building applications that can maintain context over time, resume interrupted workflows, and provide personalized experiences. SmartGraph offers built-in support for persistence through its checkpointing mechanism.
+Memory toolkits in SmartGraph provide a powerful way to add persistent storage to your AI applications. In this guide, we'll explore the DuckMemoryToolkit and discuss how to extend the MemoryToolkit for other storage options.
 
-## Understanding Persistence in SmartGraph
+## Understanding DuckMemoryToolkit
 
-SmartGraph's persistence capabilities allow you to:
+The DuckMemoryToolkit is a specialized toolkit in SmartGraph that uses DuckDB for efficient, file-based storage. It's particularly useful for applications that need to maintain state across sessions or store large amounts of structured data.
 
-- Save the state of your application at specific points in time
-- Restore the application state from a previous checkpoint
-- Create long-running conversations that can span multiple sessions
-- Implement robust error recovery mechanisms
+## Basic Usage of DuckMemoryToolkit
 
-## The CheckpointManager
-
-At the heart of SmartGraph's persistence system is the `CheckpointManager`. This component is responsible for saving and loading checkpoints, which represent snapshots of your application's state.
-
-### How Checkpointing Works
-
-```mermaid
-graph TD
-    A[Start Execution] -->|Every N nodes| B[Save Checkpoint]
-    B --> C[Continue Execution]
-    C -->|Interruption| D[Load Latest Checkpoint]
-    D --> E[Resume Execution]
-
-    style A fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style B fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style C fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style D fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-    style E fill:#ffffff,stroke:#000000,stroke-width:2px,stroke-dasharray: 5 5,rx:10,ry:10,color:#000000
-
-    linkStyle default stroke:#ff0000,stroke-width:2px,stroke-dasharray: 5 5
-```
-
-## Configuring Checkpoint Frequency
-
-You can control how often checkpoints are saved by setting the `checkpoint_frequency` parameter when creating your `SmartGraph` instance:
+Here's a simple example of how to initialize and use the DuckMemoryToolkit:
 
 ```python
-graph = SmartGraph(checkpoint_frequency=10)  # Save a checkpoint every 10 nodes
+from smartgraph.tools.duck_memory_toolkit import DuckMemoryToolkit
+
+# Initialize the toolkit
+memory = DuckMemoryToolkit("my_database.duckdb")
+
+# Add a memory
+await memory.add_memory("user:001", {"name": "Alice", "age": 30})
+
+# Retrieve a memory
+user = await memory.get_memory("user:001")
+print(user)  # {'name': 'Alice', 'age': 30}
+
+# Search memories
+results = await memory.search_memories("Alice")
+print(results)  # [{'key': 'user:001', 'value': {'name': 'Alice', 'age': 30}, ...}]
 ```
 
-The default frequency is 5 nodes. Adjust this value based on the complexity and duration of your workflow. More frequent checkpoints provide better resilience against interruptions but might incur a slight performance overhead.
+## Advanced Example: CRM System
 
-## Saving and Loading Checkpoints
-
-SmartGraph handles checkpoint saving and loading automatically during graph execution. However, you can also manually trigger these operations if needed:
+Let's look at a more complex example of using DuckMemoryToolkit in a Customer Relationship Management (CRM) system:
 
 ```python
-# Manually save a checkpoint
-await graph.checkpoint_manager.save_checkpoint(thread_id, checkpoint)
+import asyncio
+from datetime import datetime, timedelta
+from typing import Any, Dict, List
 
-# Load the latest checkpoint
-latest_checkpoint = await graph.checkpoint_manager.get_latest_checkpoint(thread_id)
+from smartgraph.tools.duck_memory_toolkit import DuckMemoryToolkit
+
+class RefinedCRMSystem:
+    def __init__(self):
+        self.memory = DuckMemoryToolkit("new_crm_database.duckdb")
+
+    async def add_customer(self, customer_id: str, name: str, email: str, company: str, created_at: str = None):
+        customer_data = {
+            "name": name,
+            "email": email,
+            "company": company,
+            "created_at": created_at or datetime.now().isoformat(),
+            "last_contact": None,
+            "notes": [],
+            "deals": []
+        }
+        await self.memory.add_memory(f"customer:{customer_id}", customer_data)
+        print(f"Added customer: {name} from {company}")
+
+    async def update_customer_contact(self, customer_id: str, note: str, contact_time: str = None):
+        customer = await self.memory.get_memory(f"customer:{customer_id}")
+        if customer:
+            customer["last_contact"] = contact_time or datetime.now().isoformat()
+            customer["notes"].append({"date": customer["last_contact"], "note": note})
+            await self.memory.add_memory(f"customer:{customer_id}", customer)
+            print(f"Updated contact info for customer: {customer['name']}")
+        else:
+            print(f"Customer with ID {customer_id} not found")
+
+    async def search_customers(self, query: str) -> List[Dict[str, Any]]:
+        results = await self.memory.search_memories(query)
+        found_customers = []
+        for result in results:
+            if result["key"].startswith("customer:"):
+                customer = result["value"]
+                found_customers.append(customer)
+                self._print_customer_info(customer)
+        return found_customers
+
+    # ... (other methods)
+
+async def main():
+    crm = RefinedCRMSystem()
+
+    # Add a customer
+    await crm.add_customer("001", "John Doe", "john@techcorp.com", "TechCorp")
+
+    # Update customer contact
+    await crm.update_customer_contact("001", "Discussed new project requirements")
+
+    # Search for customers
+    await crm.search_customers("John")
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
-## Best Practices for Managing Checkpoints
+This example demonstrates how DuckMemoryToolkit can be used to create a persistent storage system for a CRM application. It allows for adding customers, updating their information, and performing searches across the stored data.
 
-To make the most of SmartGraph's persistence capabilities, consider the following best practices:
+## Key Features of DuckMemoryToolkit
 
-<CardGroup cols={2}>
-  <Card title="Optimize Frequency" icon="clock">
-    Balance checkpoint frequency with performance needs. More frequent
-    checkpoints increase resilience but may impact speed.
-  </Card>
-  <Card title="Clean Up Regularly" icon="broom">
-    Implement a strategy to remove old or unnecessary checkpoints to manage
-    storage efficiently.
-  </Card>
-  <Card title="Validate Checkpoints" icon="check-double">
-    Periodically verify the integrity of saved checkpoints to ensure they can be
-    successfully restored.
-  </Card>
-  <Card title="Version Your Checkpoints" icon="code-branch">
-    If your application structure changes, ensure checkpoint compatibility or
-    implement a migration strategy.
-  </Card>
-</CardGroup>
+1. **Persistent Storage**: Data is stored in a DuckDB file, ensuring persistence across application restarts.
+2. **Efficient Querying**: Leverages DuckDB's efficient query engine for fast data retrieval.
+3. **JSON Support**: Natively stores and queries JSON data, making it ideal for document-like structures.
+4. **Full-Text Search**: Provides capabilities for searching across stored data.
 
-## Error Handling and Recovery
+## Extending MemoryToolkit
 
-Implement robust error handling around checkpoint operations:
+While DuckMemoryToolkit is powerful, you might need to use other storage systems. SmartGraph's MemoryToolkit can be extended to support various backends:
+
+### Creating a Custom MemoryToolkit
+
+Here's a template for creating a custom MemoryToolkit:
 
 ```python
-try:
-    latest_checkpoint = await graph.checkpoint_manager.get_latest_checkpoint(thread_id)
-    # Restore state from the checkpoint
-except Exception as e:
-    logger.error(f"Failed to load checkpoint: {e}")
-    # Implement fallback logic or start from a clean state
+from typing import Any, Dict, List, Optional
+from smartgraph.tools.base_toolkit import Toolkit
+
+class CustomMemoryToolkit(Toolkit):
+    def __init__(self, connection_string: str):
+        self.db = YourDatabaseLibrary(connection_string)
+
+    @property
+    def name(self) -> str:
+        return "CustomMemoryToolkit"
+
+    @property
+    def description(self) -> str:
+        return "A custom memory toolkit using YourDatabaseLibrary"
+
+    @property
+    def functions(self) -> Dict[str, Any]:
+        return {
+            "add_memory": self.add_memory,
+            "get_memory": self.get_memory,
+            "search_memories": self.search_memories,
+            "delete_memory": self.delete_memory,
+        }
+
+    async def add_memory(self, key: str, value: Any) -> None:
+        # Implement add logic
+        pass
+
+    async def get_memory(self, key: str) -> Optional[Any]:
+        # Implement get logic
+        pass
+
+    async def search_memories(self, query: str) -> List[Dict[str, Any]]:
+        # Implement search logic
+        pass
+
+    async def delete_memory(self, key: str) -> None:
+        # Implement delete logic
+        pass
 ```
+
+### Potential Extensions
+
+1. **Redis Toolkit**: For high-performance, in-memory data storage with persistence.
+2. **MongoDB Toolkit**: For document-based storage with powerful querying capabilities.
+3. **PostgreSQL Toolkit**: For relational data storage with JSONB support.
+4. **Elasticsearch Toolkit**: For advanced full-text search capabilities.
+
+## Best Practices
+
+1. **Choose the Right Storage**: Select a storage backend that fits your application's needs (speed, persistence, query capabilities).
+2. **Error Handling**: Implement robust error handling for database operations.
+3. **Connection Management**: Properly manage database connections, especially for long-running applications.
+4. **Data Validation**: Validate data before storage to ensure consistency.
+5. **Indexing**: Use appropriate indexing strategies to optimize search performance.
+6. **Backup and Recovery**: Implement regular backup procedures for critical data.
 
 ## Conclusion
 
-Effective use of SmartGraph's persistence capabilities can significantly enhance the robustness and user experience of your applications. By leveraging checkpoints, you can create long-running, stateful workflows that can survive interruptions and provide personalized interactions over time.
+The DuckMemoryToolkit and the extensible MemoryToolkit system in SmartGraph provide powerful options for adding persistent storage to your AI applications. Whether you're building a simple chatbot or a complex CRM system, these tools allow you to maintain state, store large datasets, and perform efficient queries.
 
-<Card title="Next Steps" icon="arrow-right" href="/essentials/assistants">
-  Now that you understand how to manage application state, learn about
-  integrating AI assistants in the [AI Assistants](/essentials/assistants)
-  guide.
-</Card>
+By understanding how to use and extend these toolkits, you can create more sophisticated, stateful AI applications that can remember and learn from past interactions.
+
+## Next Steps
+
+Now that you understand how to use memory toolkits, explore how to integrate this persistent storage with AI assistants in the [AI Assistants](./ai-assistants) section to create more powerful and context-aware AI applications.

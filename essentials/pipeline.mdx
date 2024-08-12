@@ -1,0 +1,206 @@
+---
+title: "Controlling Flow: pipeline and Branching Logic"
+sidebarTitle: "Pipeline"
+description: "Learn how to define transitions and implement dynamic decision-making in SmartGraph workflows"
+icon: "code-branch"
+---
+
+In SmartGraph, controlling the flow of data is crucial for building complex LLM applications. Let's dive into how pipelines and input handlers work together to create dynamic workflows.
+
+## Pipelines: The Backbone of Your App
+
+In SmartGraph, pipelines are similar to the main render function in a React component. They define the overall structure and flow of your application.
+
+```python
+from smartgraph import ReactiveSmartGraph
+
+graph = ReactiveSmartGraph()
+pipeline = graph.create_pipeline("MainFlow")
+```
+
+Think of a pipeline as a conveyor belt in a factory. Each component in the pipeline is a station that processes the data as it moves along.
+
+## Adding Components to Pipelines
+
+Adding components to a pipeline is like adding middleware in Express.js or composing functions in functional programming.
+
+```python
+from smartgraph.components import TextInputHandler, CompletionComponent
+
+pipeline.add_component(TextInputHandler("UserInput"))
+pipeline.add_component(CompletionComponent("LLM", model="gpt-4o-mini"))
+```
+
+Each component in the pipeline receives the output of the previous component as its input, similar to how data flows through a series of `.then()` calls in a JavaScript Promise chain.
+
+## Input Handlers: The Entry Point
+
+Input handlers in SmartGraph are analogous to form inputs in a web application. They're the entry points for data into your system.
+
+```python
+class CustomInputHandler(ReactiveComponent):
+    def process(self, input_data):
+        # Preprocess the input data
+        return processed_input
+```
+
+Just as you might use controlled inputs in React to manage form state, input handlers in SmartGraph allow you to preprocess and validate incoming data before it enters your main processing pipeline.
+
+## Branching Logic
+
+SmartGraph allows for complex branching logic, similar to how you might use conditional rendering in React or routing in a web framework.
+
+```python
+from smartgraph.components import BranchingComponent, CompletionComponent
+
+def branching_condition(data):
+    return "question" in data.lower()
+
+question_handler = CompletionComponent(
+            "QuestionHandler",
+            model="gpt-4o-mini",
+            api_key=os.getenv("OPENAI_API_KEY"),
+            toolkits=[DuckDuckGoToolkit()],
+            system_context="You are a helpful assistant that answers questions.",
+        )
+
+branching = BranchingComponent("InputRouter")
+
+pipeline.add_component(branching)
+branching.add_branch(branching_condition, question_handler, "question")
+```
+
+This branching capability allows you to create sophisticated workflows that can adapt based on the input or intermediate results.
+
+## Connecting Components Across Pipelines
+
+In more complex applications, you might need to connect components across different pipelines. This is similar to how you might use Redux to manage state across different parts of a React application.
+
+```python
+graph.connect_components("MainPipeline", "OutputComponent", "SecondaryPipeline", "InputComponent")
+```
+
+This allows for complex data flows and modularity in your application structure.
+
+## Putting It All Together
+
+Let's examine a more advanced example that demonstrates the power of branching logic in SmartGraph:
+
+```python
+# examples/advanced_branching_assistant.py
+
+import asyncio
+import os
+from dotenv import load_dotenv
+from smartgraph import ReactiveSmartGraph
+from smartgraph.components import BranchingComponent, CompletionComponent, TextInputHandler
+from smartgraph.tools.duckduckgo_toolkit import DuckDuckGoToolkit
+
+load_dotenv()
+
+def is_question(data: dict) -> bool:
+    content = data.get("content", "")
+    return "?" in content or any(
+        word in content.lower() for word in ["what", "why", "how", "when", "where", "who"]
+    )
+
+def is_greeting(data: dict) -> bool:
+    content = data.get("content", "").lower()
+    return any(word in content for word in ["hello", "hi", "hey", "greetings"])
+
+def is_command(data: dict) -> bool:
+    content = data.get("content", "").lower()
+    return content.startswith(("please", "could you", "would you", "can you"))
+
+class AdvancedBranchingAssistant(ReactiveSmartGraph):
+    def __init__(self):
+        super().__init__()
+        pipeline = self.create_pipeline("AdvancedBranchingAssistant")
+
+        pipeline.add_component(TextInputHandler("TextInput"))
+
+        branching = BranchingComponent("InputRouter")
+        pipeline.add_component(branching)
+
+        question_handler = CompletionComponent(
+            "QuestionHandler",
+            model="gpt-4o-mini",
+            api_key=os.getenv("OPENAI_API_KEY"),
+            toolkits=[DuckDuckGoToolkit()],
+            system_context="You are a helpful assistant that answers questions.",
+        )
+
+        greeting_handler = CompletionComponent(
+            "GreetingHandler",
+            model="gpt-4o-mini",
+            api_key=os.getenv("OPENAI_API_KEY"),
+            system_context="You are a friendly assistant that responds to greetings.",
+        )
+
+        command_handler = CompletionComponent(
+            "CommandHandler",
+            model="gpt-4o-mini",
+            api_key=os.getenv("OPENAI_API_KEY"),
+            system_context="You are a helpful assistant that follows commands and instructions.",
+        )
+
+        default_handler = CompletionComponent(
+            "DefaultHandler",
+            model="gpt-4o-mini",
+            api_key=os.getenv("OPENAI_API_KEY"),
+            system_context="You are a general-purpose assistant that can handle various types of input.",
+        )
+
+        branching.add_branch(is_greeting, greeting_handler, "greeting")
+        branching.add_branch(is_question, question_handler, "question")
+        branching.add_branch(is_command, command_handler, "command")
+        branching.set_default_branch(default_handler)
+
+        self.compile()
+
+    async def process(self, query):
+        return await self.execute("AdvancedBranchingAssistant", query)
+
+async def main():
+    assistant = AdvancedBranchingAssistant()
+
+    inputs = [
+        "What's the capital of France?",
+        "Hello, how are you today?",
+        "Please summarize the latest news on AI.",
+        "I like pizza.",
+    ]
+
+    for input_text in inputs:
+        result = await assistant.process(input_text)
+        print(f"\nInput: {input_text}")
+        print(f"Branch taken: {result.get('branch')}")
+        print(f"Result: {result.get('result', {}).get('ai_response', 'No response')}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+This example demonstrates a sophisticated use of branching logic in SmartGraph:
+
+1. **Multiple Branching Conditions**: We define three branching conditions (`is_question`, `is_greeting`, `is_command`) to categorize different types of user input.
+
+2. **BranchingComponent**: The `BranchingComponent` acts as a router, directing the input to the appropriate handler based on the input type.
+
+3. **Specialized Handlers**: We create four different `CompletionComponent` instances, each tailored to handle a specific type of input (questions, greetings, commands, and a default catch-all).
+
+4. **DuckDuckGoToolkit**: The question handler is equipped with the `DuckDuckGoToolkit`, allowing it to perform web searches when answering questions.
+
+5. **Default Branch**: We set a default branch to handle any input that doesn't match the other categories.
+
+6. **Asynchronous Execution**: The `process` method uses `await self.execute()` to run the pipeline asynchronously.
+
+This structure allows the assistant to adapt its behavior based on the type of input it receives. It's similar to how a complex React application might use different components and routes to handle various types of user interactions.
+
+The `main` function demonstrates how this assistant can handle a variety of inputs, from questions to greetings to commands, showcasing the flexibility of SmartGraph's branching capabilities.
+
+This example illustrates how SmartGraph can be used to create sophisticated, context-aware AI assistants that can handle a wide range of user inputs and tasks, all within a structured, maintainable framework.
+
+## Next Steps
+
+Now that you understand how to control the flow of data in SmartGraph, it's time to learn about state management. Head over to the [State Management](./state) section to discover how SmartGraph handles application state across components and pipelines.
