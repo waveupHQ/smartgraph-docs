@@ -1,0 +1,192 @@
+---
+title: "Toolkits"
+sidebarTitle: "Toolkits"
+description: "Learn how to create and use custom toolkits with CompletionComponent in SmartGraph"
+icon: "toolbox"
+---
+
+Toolkits in SmartGraph provide a powerful way to extend the capabilities of AI assistants by giving them access to external data sources or functionalities. This guide will walk you through creating custom toolkits and using them with the CompletionComponent.
+
+## Understanding Toolkits
+
+In SmartGraph, a toolkit is a collection of functions that can be used by an AI assistant to perform specific tasks. Toolkits are based on the abstract `Toolkit` class and must implement certain methods and properties.
+
+### The Base Toolkit Class
+
+```python
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List
+
+class Toolkit(ABC):
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Return the name of the toolkit."""
+        pass
+
+    @property
+    @abstractmethod
+    def description(self) -> str:
+        """Return a description of the toolkit."""
+        pass
+
+    @property
+    @abstractmethod
+    def functions(self) -> Dict[str, Any]:
+        """Return a dictionary of functions provided by the toolkit."""
+        pass
+
+    @property
+    def schemas(self) -> List[Dict[str, Any]]:
+        """Return a list of function schemas for the toolkit."""
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": name,
+                    "description": func.__doc__,
+                    "parameters": getattr(func, "schema", {}),
+                },
+            }
+            for name, func in self.functions.items()
+        ]
+```
+
+## Creating a Custom Toolkit
+
+Let's walk through creating a custom toolkit using the WeatherToolkit as an example:
+
+```python
+from typing import Any, Dict, List
+from .base_toolkit import Toolkit
+
+class WeatherToolkit(Toolkit):
+    def __init__(self, api_key: str):
+        self._api_key = api_key
+
+    @property
+    def name(self) -> str:
+        return "weather_toolkit"
+
+    @property
+    def description(self) -> str:
+        return "A toolkit for fetching weather information"
+
+    @property
+    def functions(self) -> Dict[str, Any]:
+        return {"get_temperature": self.get_temperature}
+
+    @property
+    def schemas(self) -> List[Dict[str, Any]]:
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_temperature",
+                    "description": "Get the current temperature for a specific location",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "location": {
+                                "type": "string",
+                                "description": "The city and country, e.g., 'London, UK'",
+                            }
+                        },
+                        "required": ["location"],
+                    },
+                },
+            }
+        ]
+
+    async def get_temperature(self, location: str) -> Dict[str, Any]:
+        # Simulated API call
+        # In a real implementation, you would make an API call to a weather service here
+        return {"temperature": 22.5, "unit": "Celsius", "location": location}
+```
+
+Key points in creating a custom toolkit:
+
+1. Inherit from the `Toolkit` base class.
+2. Implement the required properties: `name`, `description`, `functions`, and `schemas`.
+3. Define the functions that the toolkit will provide (e.g., `get_temperature`).
+4. Specify the schema for each function, including parameters and their types.
+
+## Using a Toolkit with CompletionComponent
+
+Once you have created a custom toolkit, you can use it with a CompletionComponent to enhance your AI assistant's capabilities. Here's an example:
+
+```python
+import asyncio
+import os
+from dotenv import load_dotenv
+from smartgraph.components import CompletionComponent
+from smartgraph.logging import SmartGraphLogger
+from smartgraph.tools.weather_toolkit import WeatherToolkit
+
+# Load environment variables and set up logging
+load_dotenv()
+logger = SmartGraphLogger.get_logger()
+logger.set_level("INFO")
+
+async def process_with_llm(input_message: str) -> dict:
+    # Create a WeatherToolkit
+    weather_toolkit = WeatherToolkit(api_key=os.getenv("OPENWEATHER_API_KEY"))
+
+    # Create a CompletionComponent with the WeatherToolkit
+    completion = CompletionComponent(
+        "AI_Completion",
+        model="gpt-3.5-turbo",
+        temperature=0.7,
+        api_key=os.getenv("OPENAI_API_KEY"),
+        toolkits=[weather_toolkit],
+    )
+
+    input_data = {"message": input_message}
+    logger.info(f"Processing input: {input_message}")
+
+    try:
+        result = await completion.process(input_data)
+        if "error" in result:
+            logger.error(f"Error during processing: {result['error']}")
+            return {"error": result["error"]}
+        else:
+            logger.info(f"Received: {result}")
+            return {"response": result.get("ai_response", "No response")}
+    except Exception as e:
+        logger.error(f"Unexpected error during processing: {str(e)}", exc_info=True)
+        return {"error": str(e)}
+
+async def main():
+    input_message = "What's the current temperature in London?"
+    result = await process_with_llm(input_message)
+
+    if "error" in result:
+        print(f"Error: {result['error']}")
+    else:
+        print(f"AI Response: {result['response']}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+In this example:
+
+1. We create an instance of the `WeatherToolkit`.
+2. We pass the toolkit to the `CompletionComponent` when initializing it.
+3. The AI assistant can now use the functions provided by the WeatherToolkit to answer weather-related questions.
+
+## Best Practices for Creating and Using Toolkits
+
+1. **Modularity**: Design toolkits to be modular and focused on specific functionalities.
+2. **Error Handling**: Implement robust error handling in toolkit functions.
+3. **Documentation**: Provide clear descriptions for toolkit functions and their parameters.
+4. **API Key Management**: Use environment variables for sensitive information like API keys.
+5. **Asynchronous Design**: Make toolkit functions asynchronous when dealing with I/O operations.
+6. **Testing**: Create unit tests for your toolkit functions to ensure reliability.
+7. **Versioning**: Consider versioning your toolkits if you plan to make breaking changes.
+
+## Conclusion
+
+Toolkits in SmartGraph provide a powerful mechanism to extend the capabilities of AI assistants. By creating custom toolkits, you can give your AI access to external data sources, APIs, or custom functionality, making it more versatile and capable of handling a wide range of tasks.
+
+Remember to design your toolkits with modularity, error handling, and clear documentation in mind. With well-designed toolkits, you can create AI assistants that can perform complex tasks and integrate seamlessly with external systems and data sources.
